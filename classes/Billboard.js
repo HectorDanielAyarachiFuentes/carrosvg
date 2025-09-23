@@ -29,8 +29,8 @@ export default class Billboard {
         this.width = (this.billboardImg ? this.billboardImg.width : 100) * this.scale;
         this.height = (this.billboardImg ? this.billboardImg.height : 50) * this.scale;
 
-        // Posiciona el cartel fuera de la pantalla a la derecha, con algo de aleatoriedad en la distancia
-        this.x = Config.CANVAS_WIDTH + Math.random() * Config.CANVAS_WIDTH * 2.5;
+        // Posiciona el cartel fuera de la pantalla a la derecha. Reducimos la distancia para que aparezcan antes.
+        this.x = Config.CANVAS_WIDTH + Math.random() * Config.CANVAS_WIDTH * 0.8;
         // Posiciona el cartel por encima del suelo, con algo de variación vertical
         this.y = Config.CANVAS_HEIGHT - this.height - (Math.random() * 20 + 30);
     }
