@@ -127,27 +127,51 @@ document.addEventListener('DOMContentLoaded', () => {
     class Tree {
         constructor() {
             this.speed = 150; // px/s, velocidad base
-            this.reset();
             this.scale = Math.random() * 0.4 + 0.8; // 0.8 a 1.2
             this.speed *= (2.0 - this.scale); // Los árboles más pequeños parecen más lejanos y se mueven más lento
+            this.isBurning = false;
+            this.burnDownProgress = 0;
+            this.reset();
         }
 
         reset() {
             this.x = CANVAS_WIDTH + Math.random() * CANVAS_WIDTH;
+            this.isBurning = false;
+            this.burnDownProgress = 0;
         }
 
         update(deltaTime) {
-            this.x -= this.speed * truckSpeedMultiplier * (deltaTime / 1000);
-            if (this.x < -100) {
-                this.reset();
+            if (this.isBurning) {
+                this.burnDownProgress += (deltaTime / 1000) / 1.5; // Tarda 1.5 segundos en quemarse
+                if (this.burnDownProgress >= 1) {
+                    this.reset();
+                }
+            } else {
+                this.x -= this.speed * truckSpeedMultiplier * (deltaTime / 1000);
+                if (this.x < -100) {
+                    this.reset();
+                }
             }
         }
 
         draw(ctx) {
             if (treeImg) {
-                const imgWidth = treeImg.width * this.scale;
-                const imgHeight = treeImg.height * this.scale;
-                ctx.drawImage(treeImg, this.x, CANVAS_HEIGHT - imgHeight, imgWidth, imgHeight);
+                if (this.isBurning) {
+                    const currentScale = this.scale * (1 - this.burnDownProgress);
+                    const imgWidth = treeImg.width * currentScale;
+                    const imgHeight = treeImg.height * currentScale;
+                    const yPos = CANVAS_HEIGHT - imgHeight;
+                    
+                    ctx.save();
+                    // Efecto de quemado/brillo rojo
+                    ctx.filter = `sepia(100%) hue-rotate(-50deg) saturate(500%) brightness(${1 + this.burnDownProgress})`;
+                    ctx.drawImage(treeImg, this.x, yPos, imgWidth, imgHeight);
+                    ctx.restore();
+                } else {
+                    const imgWidth = treeImg.width * this.scale;
+                    const imgHeight = treeImg.height * this.scale;
+                    ctx.drawImage(treeImg, this.x, CANVAS_HEIGHT - imgHeight, imgWidth, imgHeight);
+                }
             }
         }
     }
@@ -270,6 +294,37 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
+    // Rayo láser del UFO
+    class LaserBeam {
+        constructor(x, startY, endY) {
+            this.x = x;
+            this.startY = startY;
+            this.endY = endY;
+            this.life = 0.25; // Duración del flash del láser en segundos
+            this.initialLife = this.life;
+        }
+
+        update(deltaTime) {
+            this.life -= deltaTime / 1000;
+        }
+
+        draw(ctx) {
+            if (this.life <= 0) return;
+
+            const alpha = (this.life / this.initialLife);
+            ctx.save();
+            ctx.beginPath();
+            ctx.moveTo(this.x, this.startY);
+            ctx.lineTo(this.x, this.endY);
+            ctx.strokeStyle = `rgba(255, 50, 50, ${alpha})`;
+            ctx.lineWidth = 3;
+            ctx.shadowColor = 'red';
+            ctx.shadowBlur = 15;
+            ctx.stroke();
+            ctx.restore();
+        }
+    }
+
     // Vaca
     class Cow {
         constructor() {
@@ -342,6 +397,7 @@ document.addEventListener('DOMContentLoaded', () => {
     let smokeEmitterCounter = 0;
     const splashParticles = [];
     let splashEmitterCounter = 0;
+    const laserBeams = [];
 
     const truck = {
         x: CANVAS_WIDTH * 0.25,
@@ -360,7 +416,8 @@ document.addEventListener('DOMContentLoaded', () => {
         height: 18,
         lightsAngle: 0,
         visible: false,
-        targetCow: null // Propiedad para rastrear la vaca que se está abduciendo
+        targetCow: null, // Propiedad para rastrear la vaca que se está abduciendo
+        shootCooldown: 0
     };
 
     const lightning = {
@@ -483,6 +540,11 @@ document.addEventListener('DOMContentLoaded', () => {
             if (p.life <= 0) splashParticles.splice(i, 1);
         });
 
+        laserBeams.forEach((b, i) => {
+            b.update(deltaTime);
+            if (b.life <= 0) laserBeams.splice(i, 1);
+        });
+
         // Actualizar vacas
         cows.forEach(cow => cow.update(deltaTime));
 
@@ -494,6 +556,27 @@ document.addEventListener('DOMContentLoaded', () => {
             ufo.y = lerp(60, 100, ufoCycle);
             ufo.lightsAngle += deltaTime * 0.01;
 
+            // --- Lógica de Disparos del UFO ---
+            ufo.shootCooldown -= deltaTime;
+            if (ufo.shootCooldown <= 0) {
+                ufo.shootCooldown = Math.random() * 3000 + 2000; // Nueva oportunidad en 2-5 segundos
+                // 40% de probabilidad de disparar, y solo si no está abduciendo
+                if (Math.random() < 0.4 && !ufo.targetCow) {
+                    // Busca un árbol visible debajo del UFO
+                    const targetTree = trees.find(t => 
+                        !t.isBurning &&
+                        t.x + (treeImg.width * t.scale) / 2 > ufo.x &&
+                        t.x + (treeImg.width * t.scale) / 2 < ufo.x + ufo.width
+                    );
+
+                    if (targetTree) {
+                        targetTree.isBurning = true;
+                        const treeTopY = CANVAS_HEIGHT - (treeImg.height * targetTree.scale);
+                        const treeCenterX = targetTree.x + (treeImg.width * targetTree.scale) / 2;
+                        laserBeams.push(new LaserBeam(treeCenterX, ufo.y + ufo.height / 2, treeTopY));
+                    }
+                }
+            }
             // --- Lógica de Abducción ---
             const abductionWindowStart = 0.72;
             const abductionWindowEnd = 0.82;
@@ -708,25 +791,8 @@ document.addEventListener('DOMContentLoaded', () => {
     function drawUFO() {
         if (!ufo.visible) return;
 
-        ctx.save();
-        // Rayo tractor si está abduciendo una vaca
-        if (ufo.targetCow) {
-            const cow = ufo.targetCow;
-            // Efecto de energía pulsante para el rayo
-            const beamAlpha = (Math.sin(cow.abductionProgress * Math.PI * 4) + 1) / 2 * 0.4;
-
-            ctx.fillStyle = `rgba(173, 216, 230, ${beamAlpha})`;
-            ctx.beginPath();
-            ctx.moveTo(ufo.x + ufo.width * 0.25, ufo.y + ufo.height / 2);
-            ctx.lineTo(ufo.x + ufo.width * 0.75, ufo.y + ufo.height / 2);
-            const cowImgWidth = cowImg ? cowImg.width * cow.scale * (1 - cow.abductionProgress) : 20;
-            ctx.lineTo(cow.x + cowImgWidth, cow.y);
-            ctx.lineTo(cow.x, cow.y);
-            ctx.closePath();
-            ctx.fill();
-        }
-
         // Cuerpo del UFO
+        ctx.save();
         ctx.fillStyle = '#7f8c8d';
         ctx.beginPath();
         ctx.ellipse(ufo.x + ufo.width / 2, ufo.y + ufo.height / 2, ufo.width / 2, ufo.height / 2, 0, 0, Math.PI * 2);
@@ -748,6 +814,28 @@ document.addEventListener('DOMContentLoaded', () => {
         });
         ctx.globalAlpha = 1.0;
 
+        ctx.restore();
+    }
+
+    function drawTractorBeam() {
+        if (!ufo.visible || !ufo.targetCow) return;
+
+        ctx.save();
+        const cow = ufo.targetCow;
+        // Efecto de energía pulsante para el rayo
+        const beamAlpha = (Math.sin(cow.abductionProgress * Math.PI * 4) + 1) / 2 * 0.4;
+
+        ctx.fillStyle = `rgba(173, 216, 230, ${beamAlpha})`;
+        ctx.beginPath();
+        ctx.moveTo(ufo.x + ufo.width * 0.25, ufo.y + ufo.height / 2);
+        ctx.lineTo(ufo.x + ufo.width * 0.75, ufo.y + ufo.height / 2);
+        // El rayo apunta a la base de la vaca
+        const cowImgWidth = cowImg ? cowImg.width * cow.scale * (1 - cow.abductionProgress) : 20;
+        const cowBaseY = cow.y + (cowImg ? cowImg.height * cow.scale * (1 - cow.abductionProgress) : 10);
+        ctx.lineTo(cow.x + cowImgWidth, cowBaseY);
+        ctx.lineTo(cow.x, cowBaseY);
+        ctx.closePath();
+        ctx.fill();
         ctx.restore();
     }
 
@@ -787,6 +875,10 @@ document.addEventListener('DOMContentLoaded', () => {
         trees.forEach(t => t.draw(ctx));
         cows.forEach(c => c.draw(ctx));
         drawTruck();
+
+        // Los rayos se dibujan después de sus objetivos (vacas, árboles) para que se vean por encima
+        drawTractorBeam();
+        laserBeams.forEach(b => b.draw(ctx));
 
         // El relámpago se dibuja al final para que ilumine toda la escena
         drawLightning();
