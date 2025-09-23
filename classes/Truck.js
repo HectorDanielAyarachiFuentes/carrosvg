@@ -33,7 +33,7 @@ export default class Truck {
         }
     }
 
-    update(deltaTime, isNight) {
+    update(deltaTime, isNight, windStrength) {
         // Rebote
         this.bounceAngle += deltaTime * 0.01 * this.speedMultiplier;
         this.y = this.baseY - Math.sin(this.bounceAngle) * 2;
@@ -43,7 +43,7 @@ export default class Truck {
 
         // Actualizar partículas
         this.smokeParticles.forEach((p, i) => {
-            p.update(deltaTime);
+            p.update(deltaTime, windStrength);
             if (p.life <= 0) this.smokeParticles.splice(i, 1);
         });
         this.splashParticles.forEach((p, i) => {

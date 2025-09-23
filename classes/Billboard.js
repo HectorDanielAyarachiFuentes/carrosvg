@@ -25,18 +25,44 @@ export default class Billboard {
         }
     }
 
-    draw(ctx) {
+    draw(ctx, isNight) {
         if (this.billboardImg) {
-            // Dibuja el poste de soporte del cartel
+            // 1. Dibujar la luz nocturna si es de noche (detrás de todo)
+            if (isNight) {
+                const lightSourceX = this.x + this.width / 2;
+                const lightSourceY = Config.CANVAS_HEIGHT;
+                const targetY = this.y;
+                const targetWidth = this.width * 1.5;
+
+                const gradient = ctx.createLinearGradient(lightSourceX, lightSourceY, lightSourceX, targetY);
+                gradient.addColorStop(0, 'rgba(255, 255, 224, 0.2)');
+                gradient.addColorStop(1, 'rgba(255, 255, 224, 0)');
+
+                ctx.fillStyle = gradient;
+                ctx.beginPath();
+                ctx.moveTo(lightSourceX, lightSourceY);
+                ctx.lineTo(this.x - (targetWidth - this.width) / 2, targetY);
+                ctx.lineTo(this.x + this.width + (targetWidth - this.width) / 2, targetY);
+                ctx.closePath();
+                ctx.fill();
+            }
+
+            // 2. Dibuja el poste de soporte del cartel
             ctx.fillStyle = '#5c3d21'; // Color marrón para el poste
             const poleWidth = 5 * this.scale;
-            const poleHeight = Config.CANVAS_HEIGHT - this.y;
+            const poleHeight = Config.CANVAS_HEIGHT - (this.y + this.height);
             ctx.fillRect(this.x + this.width / 2 - poleWidth / 2, this.y + this.height, poleWidth, poleHeight);
 
-            // Dibuja la imagen del cartel
+            // 3. Dibuja la imagen del cartel
             ctx.drawImage(this.billboardImg, this.x, this.y, this.width, this.height);
 
-            // Opcional: Añadir un marco al cartel para darle más definición
+            // 4. Brillo sutil sobre la imagen del cartel (solo de noche)
+            if (isNight) {
+                ctx.fillStyle = 'rgba(255, 255, 200, 0.15)';
+                ctx.fillRect(this.x, this.y, this.width, this.height);
+            }
+
+            // 5. Opcional: Añadir un marco al cartel para darle más definición
             ctx.strokeStyle = '#333';
             ctx.lineWidth = 2 * this.scale;
             ctx.strokeRect(this.x, this.y, this.width, this.height);

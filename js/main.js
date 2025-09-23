@@ -22,6 +22,7 @@ const state = {
     cycleProgress: 0, // 0 a 1
     isNight: false,
     truckSpeedMultiplier: 1.0,
+    windStrength: 20, // Viento que afecta a árboles y humo
     assets: {},
     elements: {
         mountains: [],
@@ -69,6 +70,9 @@ function update(deltaTime) {
     state.cycleProgress = (state.lastTime % Config.CYCLE_DURATION) / Config.CYCLE_DURATION;
     state.isNight = state.cycleProgress >= 0.60 && state.cycleProgress < 0.90;
 
+    // Actualizar la fuerza del viento con una oscilación suave
+    state.windStrength = Math.sin(state.lastTime / 4000) * 15 + 20; // Varia entre 5 y 35
+
     // Actualizar elementos del escenario
     state.elements.mountains.forEach(m => m.update(deltaTime, state.truckSpeedMultiplier));
     state.elements.hills.forEach(h => h.update(deltaTime, state.truckSpeedMultiplier));
@@ -79,7 +83,7 @@ function update(deltaTime) {
     state.elements.raindrops.forEach(r => r.update(deltaTime));
 
     // Actualizar elementos principales
-    state.elements.truck.update(deltaTime, state.isNight);
+    state.elements.truck.update(deltaTime, state.isNight, state.windStrength);
     state.elements.ufo.update(deltaTime, state.cycleProgress, state.elements.trees, state.elements.cows, state.assets.mooSound);
     state.elements.radio.update(deltaTime, keys); // Actualiza el estado de la radio
     state.elements.biplane.update(deltaTime, state.isNight);
@@ -113,9 +117,9 @@ function draw(ctx) {
     state.elements.clouds.forEach(c => c.draw(ctx));
     state.elements.biplane.draw(ctx);
     state.elements.ufo.draw(ctx);
-    state.elements.billboards.forEach(b => b.draw(ctx)); // Dibuja los carteles
+    state.elements.billboards.forEach(b => b.draw(ctx, state.isNight)); // Dibuja los carteles
     
-    state.elements.trees.forEach(t => t.draw(ctx, state.assets.tree));
+    state.elements.trees.forEach(t => t.draw(ctx, state.windStrength));
     state.elements.cows.forEach(c => c.draw(ctx, state.assets.cow));
     
     state.elements.truck.draw(ctx, state.assets.truck, state.assets.wheels);
@@ -265,9 +269,9 @@ async function start() {
             loadImage('svg/cow.svg'),
             loadImage('img/dulcepiloto.png'),
             loadAudio('sonidos/moo.mp3', getAudioContext()),
-            loadAudio('sonidos/Un Montón de Estrellas - Santiago Cañete.mp3', getAudioContext()),
-            loadAudio('sonidos/Cancion_2_Placeholder.mp3', getAudioContext()), // Placeholder
-            loadAudio('sonidos/Cancion_3_Placeholder.mp3', getAudioContext())  // Placeholder
+            loadAudio('sonidos/Un Montón de Estrellas - Santiago Cañete.mp3', getAudioContext()), // Asegúrate de que este archivo exista en la carpeta 'sonidos/'
+            loadAudio('sonidos/Rakim-Ken-Y-Quedate-Junto-A-Mi.mp3', getAudioContext()), // Placeholder
+            loadAudio('sonidos/Ken-Y-Ese-no-soy-yo-Video-Oficial-Kenny.mp3', getAudioContext())  // Placeholder
         ]);
 
         state.assets = { truck: truckImg, wheels: wheelsImg, tree: treeImg, cow: cowImg, pilot: pilotImg, mooSound: mooSound };

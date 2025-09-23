@@ -11,12 +11,12 @@ export default class SmokeParticle {
         this.life = this.initialLife;
     }
 
-    update(deltaTime) {
+    update(deltaTime, windStrength) {
         const dt = deltaTime / 1000;
         this.life -= dt;
         this.x += this.vx * dt;
         this.y += this.vy * dt;
-        this.vx -= 20 * dt; // Viento
+        this.vx -= windStrength * dt; // El viento empuja el humo hacia la izquierda
     }
 
     draw(ctx) {
