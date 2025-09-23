@@ -19,19 +19,19 @@ body {
     display: flex;
     flex-direction: column; /* Apila el canvas y el HUD verticalmente */
     justify-content: center;
-    align-items: center;
+    /* align-items: center; -> Se quita para permitir que el HUD se estire */
     overflow: hidden;
     gap: 15px; /* Espacio entre el canvas y el HUD */
-    padding: 10px 0; /* Espacio vertical para que no se pegue a los bordes */
+    padding: 15px; /* Espacio consistente en todos los lados */
+    box-sizing: border-box;
 }
 
 #canvas-container {
     position: relative;
     aspect-ratio: 600 / 250;
-    width: auto;
-    height: auto;
     max-width: 100%;
     max-height: 100%;
+    align-self: center; /* El canvas se centra horizontalmente */
 }
 
 canvas {
@@ -43,17 +43,18 @@ canvas {
 }
 
 #hud-panel {
-    /* Ahora es un elemento de flujo normal, apilado debajo del canvas */
-    width: 95%;
-    max-width: 800px; /* Ancho máximo para pantallas grandes */
+    /* Se estira para ocupar el ancho disponible gracias al flexbox del padre */
+    position: relative; /* Para posicionar los pseudo-elementos de fondo */
+    overflow: hidden; /* Para que los fondos respeten el border-radius */
     
     display: flex;
-    justify-content: space-between;
+    justify-content: center; /* Centra los elementos internos (controles y canción) */
     align-items: center;
+    gap: 40px; /* Espacio entre los elementos cuando ambos son visibles */
     
     padding: 8px 15px;
-    
-    background: rgba(20, 20, 30, 0.5);
+    /* El fondo se gestiona ahora con pseudo-elementos para permitir transiciones complejas */
+    background: transparent;
     border: 1px solid rgba(255, 255, 255, 0.1);
     border-radius: 12px;
     box-shadow: 0 4px 20px rgba(0,0,0,0.3);
@@ -64,6 +65,48 @@ canvas {
     color: #f0f0f0;
     font: 13px "Segoe UI", "Lucida Console", Monaco, monospace;
     text-shadow: 1px 1px 2px rgba(0,0,0,0.7);
+}
+
+/* --- Fondos del HUD gestionados con pseudo-elementos --- */
+
+@keyframes rainbow-bg {
+    0%{background-position:0% 50%}
+    50%{background-position:100% 50%}
+    100%{background-position:0% 50%}
+}
+
+#hud-panel::before, 
+#hud-panel::after {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0; bottom: 0;
+    border-radius: 12px; /* Coincide con el panel padre */
+    z-index: -1; /* Detrás del texto y los controles */
+}
+
+/* ::before es el fondo de día/noche */
+#hud-panel::before {
+    background-color: rgba(40, 50, 70, 0.5); /* Color de día */
+    transition: background-color 0.5s ease, opacity 0.7s ease;
+    opacity: 1;
+}
+
+/* ::after es el fondo de arcoiris */
+#hud-panel::after {
+    background: linear-gradient(270deg, 
+        rgba(255, 121, 121, 0.8), rgba(255, 190, 118, 0.8), 
+        rgba(246, 229, 141, 0.8), rgba(186, 220, 88, 0.8), 
+        rgba(126, 214, 223, 0.8), rgba(224, 86, 253, 0.8),
+        rgba(255, 121, 121, 0.8)
+    );
+    background-size: 600% 600%;
+    animation: rainbow-bg 18s ease infinite;
+    opacity: 0;
+    transition: opacity 0.7s ease;
+}
+
+#hud-panel.night-mode::before {
+    background-color: rgba(10, 10, 20, 0.5); /* Color de noche */
 }
 
 #hud-controls {
@@ -80,9 +123,29 @@ canvas {
     margin-right: 8px;
 }
 
+/* --- Estados del HUD --- */
+
+/* Cuando la radio está encendida, mostramos el arcoiris y ocultamos el fondo normal */
+#hud-panel.radio-on::before {
+    opacity: 0;
+}
+#hud-panel.radio-on::after {
+    opacity: 1;
+}
+
 #hud-now-playing {
-    display: none; /* Se muestra con JS */
     font-weight: bold;
+    /* Estilos para la transición de aparición/desaparición */
+    opacity: 0;
+    transform: translateY(5px);
+    visibility: hidden;
+    transition: opacity 0.3s ease, transform 0.3s ease;
+}
+
+#hud-now-playing.visible {
+    opacity: 1;
+    transform: translateY(0);
+    visibility: visible;
 }
 
 /* --- Controles Móviles --- */
