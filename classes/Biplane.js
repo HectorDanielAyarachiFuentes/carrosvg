@@ -16,7 +16,7 @@ export default class Biplane {
     constructor(pilotImg) {
         this.x = -300; // Empezar fuera de la pantalla
         this.pilotImg = pilotImg;
-        this.y = 120;
+        this.y = 60; // La movemos más arriba
         this.speed = 165; // px/s
         this.scale = 0.75; // Reducimos el tamaño general en un 25%
         this.visible = false;
@@ -62,7 +62,7 @@ export default class Biplane {
         // La lógica del principio evitará que se mueva si se reinicia durante la noche.
         if (this.x > Config.CANVAS_WIDTH + 200) {
             this.x = -300 - (this.bannerWidth * this.scale);
-            this.y = 100 + Math.random() * 50;
+            this.y = 50 + Math.random() * 40; // Rango de altura nuevo: 50 a 90
             // Elegir un nuevo texto y ajustar el tamaño del cartel para la siguiente pasada
             this.setNewBanner();
         }
