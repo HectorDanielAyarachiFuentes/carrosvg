@@ -132,9 +132,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Partículas de humo mejoradas
     class SmokeParticle {
-        constructor(x, y) {
+        constructor(x, y, isNight = false) {
             this.x = x;
             this.y = y;
+            this.isNight = isNight;
             this.size = Math.random() * 4 + 2; // Tamaño inicial
             this.maxSize = Math.random() * 8 + 12; // Tamaño máximo que alcanzará
 
@@ -162,13 +163,21 @@ document.addEventListener('DOMContentLoaded', () => {
 
             const lifeProgress = Math.max(0, this.life / this.initialLife);
             const currentSize = this.size + (1 - lifeProgress) * (this.maxSize - this.size);
-            const alpha = lifeProgress * 0.4; // Opacidad máxima de 0.4
+            const alpha = lifeProgress * (this.isNight ? 0.5 : 0.4); // Un poco más opaco de noche
 
             ctx.save();
             const gradient = ctx.createRadialGradient(this.x, this.y, 0, this.x, this.y, currentSize);
-            gradient.addColorStop(0, `rgba(220, 220, 220, ${alpha})`);
-            gradient.addColorStop(0.5, `rgba(200, 200, 200, ${alpha * 0.5})`);
-            gradient.addColorStop(1, `rgba(180, 180, 180, 0)`);
+            if (this.isNight) {
+                // Humo más oscuro y denso por la noche
+                gradient.addColorStop(0, `rgba(100, 100, 100, ${alpha})`);
+                gradient.addColorStop(0.5, `rgba(80, 80, 80, ${alpha * 0.5})`);
+                gradient.addColorStop(1, `rgba(60, 60, 60, 0)`);
+            } else {
+                // Humo claro durante el día
+                gradient.addColorStop(0, `rgba(220, 220, 220, ${alpha})`);
+                gradient.addColorStop(0.5, `rgba(200, 200, 200, ${alpha * 0.5})`);
+                gradient.addColorStop(1, `rgba(180, 180, 180, 0)`);
+            }
             
             ctx.fillStyle = gradient;
             ctx.beginPath();
@@ -207,6 +216,38 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
+    // Partículas de salpicadura de agua
+    class SplashParticle {
+        constructor(x, y) {
+            this.x = x;
+            this.y = y;
+            this.size = Math.random() * 2.5 + 1;
+            // Las partículas son lanzadas hacia arriba y hacia atrás
+            this.vx = -(Math.random() * 60 + 50) * truckSpeedMultiplier;
+            this.vy = -(Math.random() * 100 + 50);
+            this.gravity = 300; // Gravedad que las hace caer
+            this.life = Math.random() * 0.6 + 0.3; // Vida corta
+            this.initialLife = this.life;
+        }
+
+        update(deltaTime) {
+            const dt = deltaTime / 1000;
+            this.vy += this.gravity * dt;
+            this.x += this.vx * dt;
+            this.y += this.vy * dt;
+            this.life -= dt;
+        }
+
+        draw(ctx) {
+            if (this.life <= 0) return;
+            const alpha = (this.life / this.initialLife) * 0.7;
+            ctx.fillStyle = `rgba(255, 255, 255, ${alpha})`;
+            ctx.beginPath();
+            ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+            ctx.fill();
+        }
+    }
+
     // --- Inicialización de objetos ---
     const mountains = [
         new SceneryObject(100, CANVAS_HEIGHT + 100, 120, 1),
@@ -233,12 +274,17 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const smokeParticles = [];
     let smokeEmitterCounter = 0;
+    const splashParticles = [];
+    let splashEmitterCounter = 0;
 
     const truck = {
         x: CANVAS_WIDTH * 0.25,
         y: CANVAS_HEIGHT - 15 - 50, // Ruedas + Carrocería
         baseY: CANVAS_HEIGHT - 15 - 50,
-        bounceAngle: 0
+        bounceAngle: 0,
+        // Coordenadas relativas del tubo de escape para evitar duplicación
+        pipeOffsetX: 45,
+        pipeOffsetY: 50
     };
 
     const ufo = {
@@ -316,6 +362,20 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
             });
 
+            // --- Emitir Salpicaduras de Agua ---
+            splashEmitterCounter += deltaTime;
+            // Más salpicaduras a mayor velocidad
+            const splashInterval = Math.max(25, 160 / truckSpeedMultiplier);
+            if (splashEmitterCounter > splashInterval) {
+                splashEmitterCounter = 0;
+                // Salpicaduras desde el punto de contacto de la rueda trasera con el suelo
+                const wheelX = truck.x + 15; // Posición aproximada de la rueda trasera
+                const wheelY = CANVAS_HEIGHT - 3; // Nivel del suelo
+                for (let i = 0; i < 3; i++) { // Un pequeño estallido de partículas
+                    splashParticles.push(new SplashParticle(wheelX, wheelY));
+                }
+            }
+
             // --- Actualizar Relámpagos ---
             lightning.strikeCooldown -= deltaTime;
             if (lightning.strikeCooldown <= 0 && !lightning.active) {
@@ -350,13 +410,19 @@ document.addEventListener('DOMContentLoaded', () => {
         if (smokeEmitterCounter > smokeInterval) {
             smokeEmitterCounter = 0;
             // El humo sale de la punta del tubo de escape
-            const pipeX = truck.x + 45; // Movido más atrás, cerca del centro
-            const pipeY = truck.y + 50; // Movido abajo, al nivel del chasis/depósito
-            smokeParticles.push(new SmokeParticle(pipeX - 10, pipeY));
+            const pipeX = truck.x + truck.pipeOffsetX;
+            const pipeY = truck.y + truck.pipeOffsetY;
+            // Pasamos 'isNight' para cambiar el color del humo
+            smokeParticles.push(new SmokeParticle(pipeX - 10, pipeY, isNight));
         }
         smokeParticles.forEach((p, i) => {
             p.update(deltaTime);
             if (p.life <= 0) smokeParticles.splice(i, 1);
+        });
+
+        splashParticles.forEach((p, i) => {
+            p.update(deltaTime);
+            if (p.life <= 0) splashParticles.splice(i, 1);
         });
 
         // Actualizar UFO y abducción de la roca
@@ -489,9 +555,10 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function drawTruck() {
-        // Humo (se dibuja primero para que quede detrás del camión)
+        // Partículas (se dibujan primero para que queden detrás del camión)
         smokeParticles.forEach(p => p.draw(ctx));
-
+        splashParticles.forEach(p => p.draw(ctx));
+        
         // Ruedas
         if (wheelsImg) {
             ctx.drawImage(wheelsImg, truck.x, CANVAS_HEIGHT - 15);
@@ -502,27 +569,52 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         // Tubo de escape (dibujado encima del camión)
-        const pipeX = truck.x + 45; // Movido más atrás, cerca del centro
-        const pipeY = truck.y + 50; // Movido abajo, al nivel del chasis/depósito
+        const pipeX = truck.x + truck.pipeOffsetX;
+        const pipeY = truck.y + truck.pipeOffsetY;
         ctx.fillStyle = '#3d3d3d'; // Metal oscuro
         ctx.fillRect(pipeX - 8, pipeY - 2, 8, 4); // El tubo horizontal
         ctx.fillStyle = '#222222'; // La apertura oscura
         ctx.fillRect(pipeX - 10, pipeY - 3, 2, 6); // La punta del tubo
 
-        // Faro (delante del camión)
+        // Faro con estela de luz por la noche
         if (isNight) {
-            const flicker = Math.random() > 0.1 ? 0.5 : 0.4;
-            const gradient = ctx.createLinearGradient(truck.x + 85, 0, truck.x + 85 + 70, 0);
-            gradient.addColorStop(0, `rgba(255, 255, 224, ${flicker})`);
-            gradient.addColorStop(1, 'rgba(255, 255, 224, 0)');
+            const headLightX = truck.x + 85;
+            const headLightYTop = truck.y + 32;
+            const headLightYBottom = truck.y + 47;
+            const beamLength = 70;
+            const flicker = Math.random() > 0.1 ? 0.6 : 0.5;
+
+            // --- 1. Estela de Luz (Glow Volumétrico) ---
+            const trailLength = 150 * (0.5 + truckSpeedMultiplier / 2);
+            const trailGradient = ctx.createLinearGradient(headLightX, 0, headLightX + trailLength, 0);
+            trailGradient.addColorStop(0, `rgba(255, 255, 224, ${flicker * 0.25})`);
+            trailGradient.addColorStop(0.3, `rgba(255, 255, 224, ${flicker * 0.15})`);
+            trailGradient.addColorStop(1, 'rgba(255, 255, 224, 0)');
 
             ctx.save();
-            ctx.fillStyle = gradient;
+            ctx.fillStyle = trailGradient;
             ctx.beginPath();
-            ctx.moveTo(truck.x + 85, truck.y + 32);
-            ctx.lineTo(truck.x + 85 + 70, truck.y + 32 + 10);
-            ctx.lineTo(truck.x + 85 + 70, truck.y + 47 + 10);
-            ctx.lineTo(truck.x + 85, truck.y + 47);
+            // Un cono ancho que se extiende hacia adelante y hacia abajo
+            ctx.moveTo(headLightX, headLightYTop);
+            ctx.lineTo(headLightX + trailLength, headLightYTop);
+            ctx.lineTo(headLightX + trailLength, headLightYBottom + 40);
+            ctx.lineTo(headLightX, headLightYBottom);
+            ctx.closePath();
+            ctx.fill();
+            ctx.restore();
+
+            // --- 2. Haz de Luz Principal (Núcleo brillante) ---
+            const coreGradient = ctx.createLinearGradient(headLightX, 0, headLightX + beamLength, 0);
+            coreGradient.addColorStop(0, `rgba(255, 255, 224, ${flicker})`);
+            coreGradient.addColorStop(1, 'rgba(255, 255, 224, 0)');
+
+            ctx.save();
+            ctx.fillStyle = coreGradient;
+            ctx.beginPath();
+            ctx.moveTo(headLightX, headLightYTop);
+            ctx.lineTo(headLightX + beamLength, headLightYTop + 10);
+            ctx.lineTo(headLightX + beamLength, headLightYBottom + 10);
+            ctx.lineTo(headLightX, headLightYBottom);
             ctx.closePath();
             ctx.fill();
             ctx.restore();
