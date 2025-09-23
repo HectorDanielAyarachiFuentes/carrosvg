@@ -50,7 +50,7 @@ canvas {
     display: flex;
     justify-content: center; /* Centra los elementos internos (controles y canción) */
     align-items: center;
-    gap: 40px; /* Espacio entre los elementos cuando ambos son visibles */
+    gap: 20px; /* Espacio entre los elementos cuando ambos son visibles */
     
     padding: 8px 15px;
     /* El fondo se gestiona ahora con pseudo-elementos para permitir transiciones complejas */
@@ -66,6 +66,29 @@ canvas {
     font: 13px "Segoe UI", "Lucida Console", Monaco, monospace;
     text-shadow: 1px 1px 2px rgba(0,0,0,0.7);
 }
+
+/* --- Day/Night Icon --- */
+#hud-day-night-icon {
+    position: relative;
+    width: 24px;
+    height: 24px;
+    font-size: 20px;
+    line-height: 24px;
+    text-align: center;
+}
+
+#hud-day-night-icon span {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    opacity: 0;
+    transform: scale(0.8) rotate(-90deg);
+    transition: opacity 0.5s ease, transform 0.5s ease;
+    cursor: default;
+}
+
 
 /* --- Fondos del HUD gestionados con pseudo-elementos --- */
 
@@ -145,19 +168,33 @@ canvas {
     opacity: 1;
 }
 
+#hud-day-night-icon span.visible {
+    opacity: 1;
+    transform: scale(1) rotate(0deg);
+}
+
 #hud-now-playing {
     font-weight: bold;
     /* Estilos para la transición de aparición/desaparición */
     opacity: 0;
-    transform: translateY(5px);
     visibility: hidden;
-    transition: opacity 0.3s ease, transform 0.3s ease;
+    transition: opacity 0.3s ease; /* Solo transición de opacidad */
+    position: relative; /* Para el pseudo-elemento del cursor */
 }
 
 #hud-now-playing.visible {
     opacity: 1;
-    transform: translateY(0);
     visibility: visible;
+}
+
+/* Cursor para el efecto de máquina de escribir */
+#hud-now-playing.typing::after {
+    content: '▋'; /* Usar un bloque más estético */
+    animation: blink 1s step-end infinite;
+}
+
+@keyframes blink {
+    50% { opacity: 0; }
 }
 
 /* --- Controles Móviles --- */
