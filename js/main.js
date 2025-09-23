@@ -14,6 +14,7 @@ import RainDrop from '../classes/RainDrop.js';
 import Radio from '../classes/Radio.js';
 import Billboard from '../classes/Billboard.js'; // Importa la nueva clase Billboard
 import Biplane from '../classes/Biplane.js';
+import DustParticle from '../classes/DustParticle.js'; // Importa la nueva clase de polvo
 import HUD from '../classes/HUD.js';
 import Particle from '../classes/Particle.js';
 
@@ -136,7 +137,7 @@ function draw(ctx, timestamp) { // Recibe timestamp para animaciones consistente
     state.elements.clouds.forEach(c => c.draw(ctx));
     state.elements.biplane.draw(ctx);
     state.elements.ufo.draw(ctx);
-    state.elements.billboards.forEach(b => b.draw(ctx, state.isNight)); // Dibuja los carteles
+    state.elements.billboards.forEach(b => b.draw(ctx, state.isNight, state.cycleProgress)); // Dibuja los carteles
     
     // OPTIMIZACIÓN: Pasar timestamp para animaciones consistentes como el balanceo de los árboles
     state.elements.trees.forEach(t => t.draw(ctx, state.windStrength, timestamp));

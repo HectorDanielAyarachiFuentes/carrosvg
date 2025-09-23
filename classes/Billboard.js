@@ -43,7 +43,7 @@ export default class Billboard {
         }
     }
 
-    draw(ctx, isNight) {
+    draw(ctx, isNight, cycleProgress) {
         if (!this.billboardImg) return;
 
         ctx.save();
@@ -83,36 +83,58 @@ export default class Billboard {
         ctx.strokeRect(this.x, this.y, this.width, this.height);
 
         // --- 3. Iluminación Nocturna (Spotlights) ---
-        if (isNight) {
+        let lightIntensity = 0;
+        if (cycleProgress !== undefined) {
+            const duskStart = 0.50;
+            const duskEnd = 0.60;
+            const dawnStart = 0.90;
+            const dawnEnd = 1.0;
+
+            if (cycleProgress >= duskStart && cycleProgress < duskEnd) {
+                // Fading in at dusk
+                lightIntensity = (cycleProgress - duskStart) / (duskEnd - duskStart);
+            } else if (cycleProgress >= duskEnd && cycleProgress < dawnStart) {
+                // Full night
+                lightIntensity = 1;
+            } else if (cycleProgress >= dawnStart && cycleProgress < dawnEnd) {
+                // Fading out at dawn
+                lightIntensity = 1 - ((cycleProgress - dawnStart) / (dawnEnd - dawnStart));
+            }
+        } else if (isNight) {
+            // Fallback for when cycleProgress is not provided
+            lightIntensity = 1;
+        }
+
+        if (lightIntensity > 0) {
             // Dibuja dos focos en la base del cartel
             const lightSize = 8 * this.scale;
             const lightY = this.y + this.height + 2 * this.scale;
 
             // --- Foco 1 ---
             const light1X = this.x + this.width * 0.5;
-            this.drawSpotlightCone(ctx, light1X, lightY + lightSize / 2);
+            this.drawSpotlightCone(ctx, light1X, lightY + lightSize / 2, lightIntensity);
             ctx.fillStyle = '#222';
             ctx.fillRect(light1X - lightSize / 2, lightY, lightSize, lightSize);
-            ctx.fillStyle = 'rgba(255, 255, 240, 0.9)';
+            ctx.fillStyle = `rgba(255, 255, 240, ${0.9 * lightIntensity})`;
             ctx.beginPath();
             ctx.arc(light1X, lightY + lightSize / 2, lightSize * 0.3, 0, Math.PI * 2);
             ctx.fill();
 
             // --- Foco 2 ---
             const light2X = this.x + this.width * 0.5;
-            this.drawSpotlightCone(ctx, light2X, lightY + lightSize / 2);
+            this.drawSpotlightCone(ctx, light2X, lightY + lightSize / 2, lightIntensity);
             ctx.fillStyle = '#222';
             ctx.fillRect(light2X - lightSize / 2, lightY, lightSize, lightSize);
-            ctx.fillStyle = 'rgba(255, 255, 240, 0.9)';
+            ctx.fillStyle = `rgba(255, 255, 240, ${0.9 * lightIntensity})`;
             ctx.beginPath();
             ctx.arc(light2X, lightY + lightSize / 2, lightSize * 0.3, 0, Math.PI * 2);
             ctx.fill();
 
             // Efecto de luz sobre la imagen
             const overlayGradient = ctx.createLinearGradient(this.x, this.y + this.height, this.x, this.y);
-            overlayGradient.addColorStop(0, 'rgba(255, 255, 224, 0.45)');
-            overlayGradient.addColorStop(0.4, 'rgba(255, 255, 224, 0.3)');
-            overlayGradient.addColorStop(1, 'rgba(255, 255, 224, 0.1)');
+            overlayGradient.addColorStop(0, `rgba(255, 255, 224, ${0.45 * lightIntensity})`);
+            overlayGradient.addColorStop(0.4, `rgba(255, 255, 224, ${0.3 * lightIntensity})`);
+            overlayGradient.addColorStop(1, `rgba(255, 255, 224, ${0.1 * lightIntensity})`);
             ctx.fillStyle = overlayGradient;
             ctx.fillRect(this.x, this.y, this.width, this.height);
         }
@@ -120,21 +142,20 @@ export default class Billboard {
         ctx.restore();
     }
 
-    drawSpotlightCone(ctx, lightX, lightY) {
+    drawSpotlightCone(ctx, lightX, lightY, lightIntensity) {
         const targetY = this.y;
         // El cono de luz se abre hacia arriba, iluminando una porción del cartel
         const coneWidthAtTop = this.width * 0.8;
         const targetLeftX = lightX - coneWidthAtTop / 2;
         const targetRightX = lightX + coneWidthAtTop / 2;
 
-        // 1. Halo de luz suave para dar atmósfera
         ctx.save();
         ctx.beginPath();
         ctx.moveTo(lightX, lightY);
         ctx.lineTo(targetLeftX - 20 * this.scale, targetY);
         ctx.lineTo(targetRightX + 20 * this.scale, targetY);
         ctx.closePath();
-        ctx.fillStyle = 'rgba(255, 255, 224, 0.1)';
+        ctx.fillStyle = `rgba(255, 255, 224, ${0.1 * lightIntensity})`;
         ctx.shadowColor = 'rgba(255, 255, 200, 0.7)';
         ctx.shadowBlur = 30 * this.scale;
         ctx.fill();
@@ -142,7 +163,7 @@ export default class Billboard {
 
         // 2. Cono de luz principal, más definido
         const gradient = ctx.createLinearGradient(lightX, lightY, lightX, targetY);
-        gradient.addColorStop(0, 'rgba(255, 255, 224, 0.4)'); // Más brillante cerca de la fuente
+        gradient.addColorStop(0, `rgba(255, 255, 224, ${0.4 * lightIntensity})`); // Más brillante cerca de la fuente
         gradient.addColorStop(1, 'rgba(255, 255, 224, 0)');
 
         ctx.fillStyle = gradient;

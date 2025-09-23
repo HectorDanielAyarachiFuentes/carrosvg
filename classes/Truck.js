@@ -1,5 +1,6 @@
 import * as Config from '../js/config.js';
 import SmokeParticle from './SmokeParticle.js';
+import DustParticle from './DustParticle.js';
 import SplashParticle from './SplashParticle.js';
 
 export default class Truck {
@@ -14,8 +15,10 @@ export default class Truck {
         this.speedMultiplier = 1.0;
         
         this.smokeParticles = [];
+        this.dustParticles = [];
         this.splashParticles = [];
         this.smokeEmitterCounter = 0;
+        this.dustEmitterCounter = 0;
         this.splashEmitterCounter = 0;
     }
 
@@ -46,6 +49,10 @@ export default class Truck {
             p.update(deltaTime, windStrength);
             if (p.life <= 0) this.smokeParticles.splice(i, 1);
         });
+        this.dustParticles.forEach((p, i) => {
+            p.update(deltaTime);
+            if (p.life <= 0) this.dustParticles.splice(i, 1);
+        });
         this.splashParticles.forEach((p, i) => {
             p.update(deltaTime);
             if (p.life <= 0) this.splashParticles.splice(i, 1);
@@ -63,26 +70,42 @@ export default class Truck {
             this.smokeParticles.push(new SmokeParticle(pipeX - 10, pipeY, isNight, this.speedMultiplier));
         }
 
-        // Salpicaduras (solo de noche/lluvia)
         if (isNight) {
+            // --- Salpicaduras de agua (solo de noche/lluvia) ---
             this.splashEmitterCounter += deltaTime;
             const splashInterval = Math.max(25, 160 / this.speedMultiplier);
             if (this.splashEmitterCounter > splashInterval) {
                 this.splashEmitterCounter = 0;
                 const wheelX = this.x + 15;
                 const wheelY = Config.CANVAS_HEIGHT - 3;
-                for (let i = 0; i < 3; i++) {
+                for (let i = 0; i < 2; i++) { // Un poco menos de partículas de agua
                     this.splashParticles.push(new SplashParticle(wheelX, wheelY, this.speedMultiplier));
                 }
             }
+            // Limpiar el polvo si empieza a llover
+            if (this.dustParticles.length > 0) this.dustParticles = [];
+
         } else {
-            this.splashParticles = []; // Limpiar salpicaduras si deja de llover
+            // --- Polvo (solo de día) ---
+            this.dustEmitterCounter += deltaTime;
+            const dustInterval = Math.max(30, 180 / this.speedMultiplier);
+            if (this.dustEmitterCounter > dustInterval) {
+                this.dustEmitterCounter = 0;
+                const wheelX = this.x + 15;
+                const wheelY = Config.CANVAS_HEIGHT - 3;
+                for (let i = 0; i < 2; i++) {
+                    this.dustParticles.push(new DustParticle(wheelX, wheelY, this.speedMultiplier));
+                }
+            }
+            // Limpiar salpicaduras si deja de llover
+            if (this.splashParticles.length > 0) this.splashParticles = [];
         }
     }
 
     draw(ctx, truckImg, wheelsImg) {
         // Las partículas se dibujan primero
         this.smokeParticles.forEach(p => p.draw(ctx));
+        this.dustParticles.forEach(p => p.draw(ctx));
         this.splashParticles.forEach(p => p.draw(ctx));
 
         if (wheelsImg) {
