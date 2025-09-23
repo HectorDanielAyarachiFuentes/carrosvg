@@ -12,6 +12,7 @@ import Truck from '../classes/Truck.js';
 import UFO from '../classes/UFO.js';
 import RainDrop from '../classes/RainDrop.js';
 import Radio from '../classes/Radio.js';
+import HUD from '../classes/HUD.js';
 
 // --- Estado Global de la Animación ---
 const state = {
@@ -31,6 +32,7 @@ const state = {
         truck: null,
         ufo: null,
         radio: null,
+        hud: null,
     }
 };
 
@@ -74,7 +76,8 @@ function update(deltaTime) {
     // Actualizar elementos principales
     state.elements.truck.update(deltaTime, state.isNight);
     state.elements.ufo.update(deltaTime, state.cycleProgress, state.elements.trees, state.elements.cows, state.assets.mooSound);
-    state.elements.radio.update(deltaTime, keys);
+    state.elements.radio.update(deltaTime, keys); // Actualiza el estado de la radio
+    state.elements.hud.update(); // Actualiza el DOM del HUD basado en el estado de la radio
     
     // Reiniciar vacas para el siguiente ciclo
     if (state.cycleProgress > 0.95) {
@@ -204,33 +207,47 @@ async function start() {
     // Configurar manejadores de eventos
     setupInputHandlers();
     // Añadir listener para reanudar audio en la primera interacción
-    const resumeAndSetupRadioKey = (e) => {
+    const resumeAndSetupKeys = (e) => {
         resumeAudio();
-        // Añadir la tecla 'R' a nuestro objeto de teclas para la radio
+        // Añadir teclas de interacción a nuestro objeto de teclas
         if (!keys.KeyR) {
             keys.KeyR = { pressed: false };
+            keys.KeyM = { pressed: false };
             window.addEventListener('keydown', (e) => {
                 if (e.code === 'KeyR') keys.KeyR.pressed = true;
+                if (e.code === 'KeyM') keys.KeyM.pressed = true;
             });
             window.addEventListener('keyup', (e) => {
                 if (e.code === 'KeyR') keys.KeyR.pressed = false;
+                if (e.code === 'KeyM') keys.KeyM.pressed = false;
             });
         }
     };
-    window.addEventListener('keydown', resumeAndSetupRadioKey, { once: true });
+    window.addEventListener('keydown', resumeAndSetupKeys, { once: true });
 
     try {
         // Cargar todos los assets en paralelo
-        const [truckImg, wheelsImg, treeImg, cowImg, mooSound, radioMusic] = await Promise.all([
+        // NOTA: Debes reemplazar los archivos placeholder con tus propios MP3
+        const [truckImg, wheelsImg, treeImg, cowImg, mooSound, radioMusic1, radioMusic2, radioMusic3] = await Promise.all([
             loadImage('svg/truck.svg'),
             loadImage('svg/wheels.svg'),
             loadImage('svg/tree.svg'),
             loadImage('svg/cow.svg'),
             loadAudio('sonidos/moo.mp3', getAudioContext()),
-            loadAudio('sonidos/Un Montón de Estrellas - Santiago Cañete.mp3', getAudioContext())
+            loadAudio('sonidos/Un Montón de Estrellas - Santiago Cañete.mp3', getAudioContext()),
+            loadAudio('sonidos/Cancion_2_Placeholder.mp3', getAudioContext()), // Placeholder
+            loadAudio('sonidos/Cancion_3_Placeholder.mp3', getAudioContext())  // Placeholder
         ]);
 
-        state.assets = { truck: truckImg, wheels: wheelsImg, tree: treeImg, cow: cowImg, mooSound: mooSound, radioMusic: radioMusic };
+        state.assets = { truck: truckImg, wheels: wheelsImg, tree: treeImg, cow: cowImg, mooSound: mooSound };
+
+        // Agrupar canciones para la radio
+        const musicTracks = [
+            { buffer: radioMusic1, name: 'Un Montón de Estrellas' },
+            { buffer: radioMusic2, name: 'Carretera Infinita' },
+            { buffer: radioMusic3, name: 'Ritmo Nocturno' }
+        ].filter(track => track.buffer); // Filtrar canciones que no se cargaron
+
         // Inicializar todos los objetos de la animación
         state.elements.truck = new Truck();
         state.elements.ufo = new UFO();
@@ -258,7 +275,10 @@ async function start() {
         }));
 
         // Inicializar la radio después del camión
-        state.elements.radio = new Radio(state.assets.radioMusic, state.elements.truck);
+        state.elements.radio = new Radio(musicTracks, state.elements.truck);
+
+        // Inicializar el HUD
+        state.elements.hud = new HUD(state.elements.radio);
 
         // Iniciar el bucle de animación
         requestAnimationFrame(animate);
