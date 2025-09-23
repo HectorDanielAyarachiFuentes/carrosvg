@@ -227,6 +227,47 @@ function drawStars(ctx) {
     ctx.globalAlpha = 1;
 }
 
+function setupMobileControls() {
+    const btnLeft = document.getElementById('btn-left');
+    const btnRight = document.getElementById('btn-right');
+    const btnRadio = document.getElementById('btn-radio');
+    const btnSong = document.getElementById('btn-song');
+
+    // Si los botones no existen en el DOM, no hacer nada.
+    if (!btnLeft || !btnRight || !btnRadio || !btnSong) {
+        return;
+    }
+
+    // --- Botones de Aceleración y Freno (mantener pulsado) ---
+    const setupHoldableButton = (element, key) => {
+        const press = (e) => { e.preventDefault(); keys[key] = true; };
+        const release = (e) => { e.preventDefault(); keys[key] = false; };
+        
+        element.addEventListener('touchstart', press, { passive: false });
+        element.addEventListener('touchend', release, { passive: false });
+        element.addEventListener('touchcancel', release, { passive: false });
+    };
+
+    setupHoldableButton(btnLeft, 'ArrowLeft');
+    setupHoldableButton(btnRight, 'ArrowRight');
+
+    // --- Botones de Radio (un solo toque) ---
+    const setupTapButton = (element, action) => {
+        element.addEventListener('click', (e) => {
+            e.preventDefault();
+            action();
+        });
+    };
+
+    setupTapButton(btnRadio, () => {
+        if (state.elements.radio) state.elements.radio.toggle();
+    });
+
+    setupTapButton(btnSong, () => {
+        if (state.elements.radio) state.elements.radio.changeTrack();
+    });
+}
+
 // --- Función de Inicio ---
 async function start() {
     const canvas = document.getElementById('animationCanvas');
@@ -240,25 +281,8 @@ async function start() {
 
     // Configurar manejadores de eventos
     setupInputHandlers();
-    // Añadir listener para reanudar audio en la primera interacción
-    const resumeAndSetupKeys = (e) => {
-        resumeAudio();
-        // Añadir teclas de interacción a nuestro objeto de teclas
-        if (!keys.KeyR) {
-            keys.KeyR = { pressed: false };
-            keys.KeyM = { pressed: false };
-            window.addEventListener('keydown', (e) => {
-                if (e.code === 'KeyR') keys.KeyR.pressed = true;
-                if (e.code === 'KeyM') keys.KeyM.pressed = true;
-            });
-            window.addEventListener('keyup', (e) => {
-                if (e.code === 'KeyR') keys.KeyR.pressed = false;
-                if (e.code === 'KeyM') keys.KeyM.pressed = false;
-            });
-        }
-    };
-    window.addEventListener('keydown', resumeAndSetupKeys, { once: true });
-
+    setupMobileControls();
+    
     try {
         // Cargar todos los assets en paralelo
         // NOTA: Debes reemplazar los archivos placeholder con tus propios MP3
