@@ -17,6 +17,7 @@ import Biplane from '../classes/Biplane.js';
 import DustParticle from '../classes/DustParticle.js'; // Importa la nueva clase de polvo
 import HUD from '../classes/HUD.js';
 import Particle from '../classes/Particle.js';
+import Critter from '../classes/Critter.js'; // Importa la nueva clase de animales
 
 // --- Estado Global de la Animación ---
 const state = {
@@ -33,6 +34,7 @@ const state = {
         trees: [],
         cows: [],
         billboards: [], // Añade un array para los carteles publicitarios
+        critters: [], // Array para los nuevos animales
         raindrops: [],
         stars: [],
         particles: [],
@@ -83,6 +85,7 @@ function update(deltaTime) {
     state.elements.trees.forEach(t => t.update(deltaTime, state.truckSpeedMultiplier));
     state.elements.cows.forEach(c => c.update(deltaTime, state.truckSpeedMultiplier));
     state.elements.billboards.forEach(b => b.update(deltaTime, state.truckSpeedMultiplier)); // Actualiza los carteles
+    state.elements.critters.forEach(c => c.update(deltaTime, state.truckSpeedMultiplier, state.cycleProgress));
     state.elements.raindrops.forEach(r => r.update(deltaTime));
 
     // Actualizar elementos principales
@@ -142,6 +145,7 @@ function draw(ctx, timestamp) { // Recibe timestamp para animaciones consistente
     // OPTIMIZACIÓN: Pasar timestamp para animaciones consistentes como el balanceo de los árboles
     state.elements.trees.forEach(t => t.draw(ctx, state.windStrength, timestamp));
     state.elements.cows.forEach(c => c.draw(ctx, state.assets.cow));
+    state.elements.critters.forEach(c => c.draw(ctx)); // Dibuja los animales
     
     state.elements.truck.draw(ctx, state.assets.truck, state.assets.wheels);
     state.elements.radio.draw(ctx);
@@ -333,7 +337,7 @@ async function start() {
     try {
         // Cargar todos los assets en paralelo
         // NOTA: Debes reemplazar los archivos placeholder con tus propios MP3
-        const [truckImg, wheelsImg, treeImg, cowImg, pilotImg, mooSound, billboardImg1, billboardImg2] = await Promise.all([
+        const [truckImg, wheelsImg, treeImg, cowImg, pilotImg, mooSound, billboardImg1, billboardImg2, rabbitImg, foxImg] = await Promise.all([
             loadImage('svg/truck.svg'),
             loadImage('svg/wheels.svg'),
             loadImage('svg/tree.svg'),
@@ -341,10 +345,20 @@ async function start() {
             loadImage('img/dulcepiloto.png'), // Este es el piloto
             loadAudio('sonidos/moo.mp3', audioCtx),
             loadImage('img/dulce-cartel-1.jpg'),
-            loadImage('img/dulce-cartel-2.jpg'), // Cargar la segunda imagen para el cartel
+            loadImage('img/dulce-cartel-2.jpg'),
+            loadImage('svg/rabbit.svg'), // NUEVO: Imagen del conejo
+            loadImage('svg/fox.svg'), // NUEVO: Imagen del zorro
         ]);
 
-        state.assets = { truck: truckImg, wheels: wheelsImg, tree: treeImg, cow: cowImg, pilot: pilotImg, mooSound: mooSound };
+        state.assets = { 
+            truck: truckImg, 
+            wheels: wheelsImg, 
+            tree: treeImg, 
+            cow: cowImg, 
+            pilot: pilotImg, 
+            mooSound: mooSound,
+            critterImages: { rabbit: rabbitImg, fox: foxImg } // Agrupa las imágenes de los animales
+        };
         
         // Crear una lista de imágenes disponibles para los carteles
         const billboardImages = [pilotImg, billboardImg1, billboardImg2].filter(img => img); // Filtra si alguna imagen no cargó
@@ -381,6 +395,8 @@ async function start() {
         // Instancia los carteles, eligiendo una imagen al azar de las disponibles
         // Pasamos el array completo de imágenes para que cada cartel pueda cambiarla al resetearse.
         state.elements.billboards = Array.from({ length: 2 }, () => new Billboard(state.assets.billboardImages));
+        // Instancia los nuevos animales
+        state.elements.critters = Array.from({ length: 3 }, () => new Critter(state.assets.critterImages));
         state.elements.raindrops = Array.from({ length: 200 }, () => new RainDrop());
         state.elements.stars = Array.from({ length: 100 }, () => ({
             x: Math.random() * Config.CANVAS_WIDTH,
