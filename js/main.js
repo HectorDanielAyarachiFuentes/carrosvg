@@ -56,7 +56,7 @@ function animate(timestamp) {
     update(deltaTime);
 
     // 2. Limpiar y dibujar todo
-    draw(ctx);
+    draw(ctx, timestamp);
 
     // Solicitar el siguiente frame
     requestAnimationFrame(animate);
@@ -100,12 +100,14 @@ function update(deltaTime) {
     }
 
     // Actualizar partículas
-    state.elements.particles.forEach((p, index) => {
+    // OPTIMIZACIÓN: Iterar hacia atrás para eliminar elementos de forma segura y eficiente.
+    for (let i = state.elements.particles.length - 1; i >= 0; i--) {
+        const p = state.elements.particles[i];
         p.update();
         if (p.life <= 0) {
-            state.elements.particles.splice(index, 1);
+            state.elements.particles.splice(i, 1);
         }
-    });
+    }
     // Reiniciar vacas para el siguiente ciclo
     if (state.cycleProgress > 0.95) {
         state.elements.cows.forEach(cow => {
@@ -115,7 +117,7 @@ function update(deltaTime) {
 }
 
 // --- Función de Dibujo General ---
-function draw(ctx) {
+function draw(ctx, timestamp) { // Recibe timestamp para animaciones consistentes
     // Limpiar canvas
     ctx.clearRect(0, 0, Config.CANVAS_WIDTH, Config.CANVAS_HEIGHT);
 
@@ -136,7 +138,8 @@ function draw(ctx) {
     state.elements.ufo.draw(ctx);
     state.elements.billboards.forEach(b => b.draw(ctx, state.isNight)); // Dibuja los carteles
     
-    state.elements.trees.forEach(t => t.draw(ctx, state.windStrength));
+    // OPTIMIZACIÓN: Pasar timestamp para animaciones consistentes como el balanceo de los árboles
+    state.elements.trees.forEach(t => t.draw(ctx, state.windStrength, timestamp));
     state.elements.cows.forEach(c => c.draw(ctx, state.assets.cow));
     
     state.elements.truck.draw(ctx, state.assets.truck, state.assets.wheels);

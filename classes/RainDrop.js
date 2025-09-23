@@ -62,12 +62,12 @@ export default class RainDrop {
             }
         } else {
             // Actualizar partículas de la salpicadura
-            this.splashParticles.forEach((p, i) => {
+            // OPTIMIZACIÓN: Iterar hacia atrás para eliminar elementos de forma segura y eficiente.
+            for (let i = this.splashParticles.length - 1; i >= 0; i--) {
+                const p = this.splashParticles[i];
                 p.update(deltaTime);
-                if (p.life <= 0) {
-                    this.splashParticles.splice(i, 1);
-                }
-            });
+                if (p.life <= 0) this.splashParticles.splice(i, 1);
+            }
 
             // Una vez que todas las partículas han desaparecido, resetear la gota
             if (this.splashParticles.length === 0) {

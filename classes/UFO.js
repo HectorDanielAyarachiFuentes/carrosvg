@@ -55,10 +55,12 @@ export default class UFO {
         }
 
         // Actualizar láseres
-        this.laserBeams.forEach((b, i) => {
+        // OPTIMIZACIÓN: Iterar hacia atrás para eliminar elementos de forma segura y eficiente.
+        for (let i = this.laserBeams.length - 1; i >= 0; i--) {
+            const b = this.laserBeams[i];
             b.update(deltaTime);
             if (b.life <= 0) this.laserBeams.splice(i, 1);
-        });
+        }
     }
 
     // --- LÓGICA DE HABILIDADES (sin cambios) ---
@@ -302,4 +304,3 @@ export default class UFO {
         }
     }
 }
-

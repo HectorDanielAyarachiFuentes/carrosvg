@@ -34,7 +34,7 @@ export default class Tree {
         }
     }
 
-    draw(ctx, windStrength) {
+    draw(ctx, windStrength, timestamp) {
         if (this.treeImg) {
             const imgWidth = this.treeImg.width * this.scale;
             const imgHeight = this.treeImg.height * this.scale;
@@ -46,8 +46,9 @@ export default class Tree {
 
             // La amplitud máxima del balanceo depende de la fuerza del viento
             const maxSway = windStrength / 1500; // Convertir la fuerza del viento en un ángulo sutil
-            // Cada árbol se balancea a su propio ritmo
-            const swayAngle = Math.sin(this.swayPhase + Date.now() / 700) * maxSway;
+            // OPTIMIZACIÓN: Usar el timestamp del bucle de animación en lugar de Date.now()
+            // para un movimiento más suave y consistente, y evitar una llamada extra al sistema.
+            const swayAngle = Math.sin(this.swayPhase + timestamp / 700) * maxSway;
 
             ctx.save();
             // Mover el origen al punto de pivote, rotar y devolver el origen
