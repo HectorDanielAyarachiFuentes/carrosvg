@@ -195,6 +195,7 @@ body {
     width: 35px;
     bottom: 0;
     background: url(tree.svg) no-repeat;
+    transform: translateX(-50px); /* Mueve el pino estático fuera de la pantalla */
 }
 
 .tree:nth-child(4) { animation: tree 3s 0.000s ease-in-out infinite; }
