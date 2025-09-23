@@ -10,6 +10,8 @@ export default class Radio {
         this.isLoading = false;
         this.radioAudioSource = null;
         this.visualizerAngle = 0;
+        this.analyser = null;
+        this.frequencyData = null;
         this.rKeyPressed = false; // Para manejar una sola pulsación de tecla
         this.mKeyPressed = false; // Para cambiar de canción
         this.currentTrackIndex = 0;
@@ -24,6 +26,7 @@ export default class Radio {
         if (this.isRadioOn) {
             if (this.radioAudioSource) {
                 this.radioAudioSource.stop();
+                this.radioAudioSource.disconnect();
                 this.radioAudioSource = null;
             }
             this.isRadioOn = false;
@@ -58,10 +61,18 @@ export default class Radio {
         if (audioCtx.state === 'suspended') {
             audioCtx.resume();
         }
+
+        // --- NUEVO: Configurar Analyser para el ritmo ---
+        this.analyser = audioCtx.createAnalyser();
+        this.analyser.fftSize = 256; // Tamaño pequeño para buen rendimiento
+        const bufferLength = this.analyser.frequencyBinCount;
+        this.frequencyData = new Uint8Array(bufferLength);
+
         this.radioAudioSource = audioCtx.createBufferSource();
         this.radioAudioSource.buffer = currentTrack.buffer;
-        this.radioAudioSource.connect(audioCtx.destination);
         this.radioAudioSource.loop = true;
+        this.radioAudioSource.connect(this.analyser);
+        this.analyser.connect(audioCtx.destination);
         this.radioAudioSource.start(0);
         this.isRadioOn = true;
     }
@@ -75,6 +86,7 @@ export default class Radio {
         if (wasOn) {
             // Apaga la música actual de forma síncrona
             if (this.radioAudioSource) {
+                this.radioAudioSource.disconnect();
                 this.radioAudioSource.stop();
                 this.radioAudioSource = null;
             }
@@ -118,6 +130,21 @@ export default class Radio {
             return this.musicTracks[this.currentTrackIndex].name;
         }
         return 'Silencio';
+    }
+
+    getBassLevel() {
+        if (!this.isRadioOn || !this.analyser) {
+            return 0;
+        }
+        this.analyser.getByteFrequencyData(this.frequencyData);
+
+        // Las frecuencias bajas están en los primeros bins del array.
+        // Tomamos un promedio de los primeros 4 bins (aprox. 0-172Hz con fftSize 256 y 44.1kHz)
+        const bassBins = this.frequencyData.slice(0, 4);
+        const average = bassBins.reduce((sum, value) => sum + value, 0) / bassBins.length;
+
+        // Normalizar el valor (0-255) a un rango de 0-1 para usarlo fácilmente.
+        return average / 255;
     }
 
     draw(ctx) {

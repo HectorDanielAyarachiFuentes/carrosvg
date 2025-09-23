@@ -17,6 +17,12 @@ export default class HUD {
         this.typewriterSpeed = 40; // ms per character
         this.isTyping = false;
 
+        // --- Glitch and Pulse state ---
+        this.glitchCooldown = 8000; // Time until next possible glitch
+        this.glitchTimer = this.glitchCooldown + Math.random() * 5000; // Start with a random delay
+        this.isGlitching = false;
+        this.glitchDuration = 0;
+
         // Poblar el panel de controles estático una sola vez
         if (this.controlsElement) {
             this.controlsElement.innerHTML = `
@@ -55,6 +61,43 @@ export default class HUD {
         if (this.sunIcon && this.moonIcon) {
             this.sunIcon.classList.toggle('visible', !isNight);
             this.moonIcon.classList.toggle('visible', isNight);
+        }
+
+        // --- Rhythm and Glitch Effects ---
+        if (this.radio.isRadioOn) {
+            // Rhythm Pulse Effect
+            const bassLevel = this.radio.getBassLevel();
+            const pulseScale = 1 + bassLevel * 0.03; // Subtle pulse
+            if (this.hudPanelElement) this.hudPanelElement.style.setProperty('--hud-pulse-scale', pulseScale);
+            if (this.mobileControlsElement) this.mobileControlsElement.style.setProperty('--hud-pulse-scale', pulseScale);
+
+            // Glitch Effect Logic
+            this.glitchTimer -= deltaTime;
+            if (this.glitchTimer <= 0 && !this.isGlitching) {
+                this.isGlitching = true;
+                this.glitchDuration = Math.random() * 150 + 100; // Glitch for 100-250ms
+                if (this.hudPanelElement) this.hudPanelElement.classList.add('glitch-active');
+                if (this.mobileControlsElement) this.mobileControlsElement.classList.add('glitch-active');
+            }
+
+            if (this.isGlitching) {
+                this.glitchDuration -= deltaTime;
+                if (this.glitchDuration <= 0) {
+                    this.isGlitching = false;
+                    this.glitchTimer = this.glitchCooldown + Math.random() * 10000; // Cooldown for 8-18s
+                    if (this.hudPanelElement) this.hudPanelElement.classList.remove('glitch-active');
+                    if (this.mobileControlsElement) this.mobileControlsElement.classList.remove('glitch-active');
+                }
+            }
+        } else {
+            // Reset effects when radio is off
+            if (this.isGlitching) {
+                this.isGlitching = false;
+                if (this.hudPanelElement) this.hudPanelElement.classList.remove('glitch-active');
+                if (this.mobileControlsElement) this.mobileControlsElement.classList.remove('glitch-active');
+            }
+            if (this.hudPanelElement) this.hudPanelElement.style.setProperty('--hud-pulse-scale', 1);
+            if (this.mobileControlsElement) this.mobileControlsElement.style.setProperty('--hud-pulse-scale', 1);
         }
 
         // --- Lógica del efecto máquina de escribir ---
