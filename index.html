@@ -5,64 +5,30 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Animación de Camión Veloz con Canvas</title>
     <link rel="stylesheet" href="style.css">
-    <style>
-        #mobile-controls {
-            display: none; /* Oculto por defecto en escritorio */
-            position: fixed;
-            bottom: 15px;
-            left: 0;
-            width: 100%;
-            justify-content: space-between;
-            padding: 0 20px;
-            box-sizing: border-box;
-            z-index: 100;
-            -webkit-user-select: none; /* Evita la selección de texto al tocar */
-            -ms-user-select: none;
-            user-select: none;
-        }
-
-        /* Se muestra en dispositivos táctiles o pantallas pequeñas */
-        @media (hover: none), (max-width: 800px) {
-            #mobile-controls {
-                display: flex;
-            }
-        }
-
-        .control-group {
-            display: flex;
-            gap: 20px;
-        }
-
-        #mobile-controls button {
-            width: 60px;
-            height: 60px;
-            border-radius: 50%;
-            border: 2px solid rgba(255, 255, 255, 0.6);
-            background-color: rgba(0, 0, 0, 0.4);
-            color: white;
-            font-size: 28px;
-            font-weight: bold;
-            cursor: pointer;
-        }
-    </style>
 </head>
 <body>
-    <div id="hud-controls" class="hud-panel">
-        <!-- Contenido generado por JS -->
-    </div>
-    <div id="hud-now-playing" class="hud-panel">
-        <!-- Contenido generado por JS -->
-    </div>
-    <canvas id="animationCanvas"></canvas>
-    <!-- Controles para dispositivos móviles -->
-    <div id="mobile-controls">
-        <div class="control-group">
-            <button id="btn-left" aria-label="Frenar">◄</button>
-            <button id="btn-right" aria-label="Acelerar">►</button>
+    <div id="app-container">
+        <div id="game-wrapper">
+            <div id="canvas-container">
+                <div id="hud-controls" class="hud-panel">
+                    <!-- Contenido generado por JS -->
+                </div>
+                <div id="hud-now-playing" class="hud-panel">
+                    <!-- Contenido generado por JS -->
+                </div>
+                <canvas id="animationCanvas"></canvas>
+            </div>
         </div>
-        <div class="control-group">
-            <button id="btn-radio" aria-label="Radio On/Off">R</button>
-            <button id="btn-song" aria-label="Cambiar Canción">M</button>
+        <!-- Controles para dispositivos móviles -->
+        <div id="mobile-controls">
+            <div class="control-group">
+                <button id="btn-left" aria-label="Frenar">◄</button>
+                <button id="btn-right" aria-label="Acelerar">►</button>
+            </div>
+            <div class="control-group">
+                <button id="btn-radio" aria-label="Radio On/Off">R</button>
+                <button id="btn-song" aria-label="Cambiar Canción">M</button>
+            </div>
         </div>
     </div>
     <!-- El nuevo script que controlará toda la animación -->

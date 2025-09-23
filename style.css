@@ -1,21 +1,46 @@
 body {
     margin: 0;
     overflow: hidden;
+    background: #2c3e50;
+}
+
+#app-container {
+    display: flex;
+    flex-direction: column;
+    width: 100vw;
+    height: 100vh; /* Fallback for older browsers */
+    height: 100svh; /* Best for mobile, accounts for browser UI */
+}
+
+#game-wrapper {
+    position: relative;
+    flex-grow: 1; /* Ocupa el espacio vertical disponible */
+    min-height: 0; /* Permite que el contenedor se encoja si es necesario */
     display: flex;
     justify-content: center;
     align-items: center;
-    min-height: 100vh;
-    background: #2c3e50;
+    overflow: hidden;
+}
+
+#canvas-container {
+    position: relative;
+    aspect-ratio: 600 / 250;
+    width: auto;
+    height: auto;
+    max-width: 100%;
+    max-height: 100%;
 }
 
 canvas {
     display: block;
+    width: 100%;
+    height: 100%;
     border-bottom: 3px solid #fff;
-    background: #009688;
+    box-sizing: border-box;
 }
 
 .hud-panel {
-    position: fixed;
+    position: absolute; /* Posicionado relativo a #canvas-container */
     background: rgba(0, 0, 0, 0.5);
     border: 1px solid rgba(255, 255, 255, 0.2);
     border-radius: 8px;
@@ -32,13 +57,68 @@ canvas {
 }
 
 #hud-controls {
-    top: 15px;
-    left: 15px;
+    top: 10px;
+    left: 10px;
 }
 
 #hud-now-playing {
-    top: 15px;
-    right: 15px;
+    top: 10px;
+    right: 10px;
     padding: 10px 15px;
     display: none; /* Se muestra con JS */
+}
+
+/* --- Controles Móviles --- */
+#mobile-controls {
+    display: none; /* Oculto por defecto en escritorio */
+    flex-shrink: 0; /* No se encoge */
+    justify-content: space-between;
+    padding: 10px 20px;
+    box-sizing: border-box;
+    background-color: rgba(0, 0, 0, 0.2);
+    -webkit-user-select: none; /* Evita la selección de texto al tocar */
+    -ms-user-select: none;
+    user-select: none;
+}
+
+.control-group {
+    display: flex;
+    gap: 20px;
+}
+
+#mobile-controls button {
+    width: 60px;
+    height: 60px;
+    border-radius: 50%;
+    border: 2px solid rgba(255, 255, 255, 0.6);
+    background-color: rgba(0, 0, 0, 0.4);
+    color: white;
+    font-size: 28px;
+    font-weight: bold;
+    cursor: pointer;
+    /* Efecto visual al presionar */
+    transition: transform 0.1s ease;
+}
+
+#mobile-controls button:active {
+    transform: scale(0.9);
+    background-color: rgba(0, 0, 0, 0.6);
+}
+
+/* Ocultar instrucciones de teclado en móvil, ya que tenemos botones */
+@media (hover: none), (max-width: 800px) {
+    #hud-controls {
+        display: none;
+    }
+
+    /* En móvil, el panel de la canción puede ser más grande y centrado */
+    #hud-now-playing {
+        left: 10px;
+        right: 10px;
+        text-align: center;
+    }
+
+    #mobile-controls {
+        display: flex;
+    }
 }
