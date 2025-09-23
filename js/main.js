@@ -12,6 +12,7 @@ import Truck from '../classes/Truck.js';
 import UFO from '../classes/UFO.js';
 import RainDrop from '../classes/RainDrop.js';
 import Radio from '../classes/Radio.js';
+import Billboard from '../classes/Billboard.js'; // Importa la nueva clase Billboard
 import Biplane from '../classes/Biplane.js';
 import HUD from '../classes/HUD.js';
 
@@ -28,6 +29,7 @@ const state = {
         clouds: [],
         trees: [],
         cows: [],
+        billboards: [], // Añade un array para los carteles publicitarios
         raindrops: [],
         stars: [],
         truck: null,
@@ -73,6 +75,7 @@ function update(deltaTime) {
     state.elements.clouds.forEach(c => c.update(deltaTime, state.isNight));
     state.elements.trees.forEach(t => t.update(deltaTime, state.truckSpeedMultiplier));
     state.elements.cows.forEach(c => c.update(deltaTime, state.truckSpeedMultiplier));
+    state.elements.billboards.forEach(b => b.update(deltaTime, state.truckSpeedMultiplier)); // Actualiza los carteles
     state.elements.raindrops.forEach(r => r.update(deltaTime));
 
     // Actualizar elementos principales
@@ -110,6 +113,7 @@ function draw(ctx) {
     state.elements.clouds.forEach(c => c.draw(ctx));
     state.elements.biplane.draw(ctx);
     state.elements.ufo.draw(ctx);
+    state.elements.billboards.forEach(b => b.draw(ctx)); // Dibuja los carteles
     
     state.elements.trees.forEach(t => t.draw(ctx, state.assets.tree));
     state.elements.cows.forEach(c => c.draw(ctx, state.assets.cow));
@@ -267,7 +271,7 @@ async function start() {
         ]);
 
         state.assets = { truck: truckImg, wheels: wheelsImg, tree: treeImg, cow: cowImg, pilot: pilotImg, mooSound: mooSound };
-
+        state.assets.billboard = pilotImg; // Reutiliza la imagen del piloto para el cartel
         // Agrupar canciones para la radio
         const musicTracks = [
             { buffer: radioMusic1, name: 'Un Montón de Estrellas' },
@@ -293,6 +297,7 @@ async function start() {
         state.elements.clouds = Array.from({ length: 3 }, () => new Cloud());
         state.elements.trees = Array.from({ length: 4 }, () => new Tree(treeImg));
         state.elements.cows = Array.from({ length: 3 }, () => new Cow(cowImg));
+        state.elements.billboards = Array.from({ length: 2 }, () => new Billboard(state.assets.billboard)); // Instancia un par de carteles
         state.elements.raindrops = Array.from({ length: 200 }, () => new RainDrop());
         state.elements.stars = Array.from({ length: 100 }, () => ({
             x: Math.random() * Config.CANVAS_WIDTH,
