@@ -102,7 +102,7 @@ export default class Truck {
         }
     }
 
-    draw(ctx, truckImg, wheelsImg) {
+    draw(ctx, truckImg, wheelsImg, isNight, fogIntensity) {
         // Las partículas se dibujan primero
         this.smokeParticles.forEach(p => p.draw(ctx));
         this.dustParticles.forEach(p => p.draw(ctx));
@@ -123,9 +123,14 @@ export default class Truck {
         ctx.fillStyle = '#222222';
         ctx.fillRect(pipeX - 10, pipeY - 3, 2, 6);
 
-        // Faro (solo de noche)
-        if (this.y < this.baseY + 50) { // Un truco para saber si es de noche
+        // --- LUCES ---
+        // Faro principal (solo de noche)
+        if (isNight) {
              this.drawHeadlight(ctx);
+        }
+        // Luces antiniebla (cuando hay niebla)
+        if (fogIntensity > 0) {
+            this.drawFogLights(ctx, fogIntensity);
         }
     }
 
@@ -147,6 +152,50 @@ export default class Truck {
         ctx.lineTo(headLightX + trailLength, headLightYTop);
         ctx.lineTo(headLightX + trailLength, headLightYBottom + 40);
         ctx.lineTo(headLightX, headLightYBottom);
+        ctx.closePath();
+        ctx.fill();
+    }
+
+    /**
+     * Dibuja las luces antiniebla del camión.
+     * @param {CanvasRenderingContext2D} ctx El contexto del canvas.
+     * @param {number} intensity La intensidad de la niebla (0 a 1), que afecta el brillo.
+     */
+    drawFogLights(ctx, intensity) {
+        const flicker = Math.random() > 0.1 ? 1.0 : 0.9;
+        const alpha = intensity * 0.7 * flicker; // Máxima opacidad de 0.7
+
+        const lightY = this.y + 58;
+        const light1X = this.x + 70;
+        const light2X = this.x + 82;
+
+        // Dibuja el cono de luz para cada faro
+        this.drawFogLightCone(ctx, light1X, lightY, alpha);
+        this.drawFogLightCone(ctx, light2X, lightY, alpha);
+
+        // Dibuja la bombilla/faro en sí
+        ctx.fillStyle = `rgba(255, 220, 150, ${intensity * 0.9})`;
+        ctx.shadowColor = 'rgba(255, 200, 100, 1)';
+        ctx.shadowBlur = 8;
+        ctx.fillRect(light1X - 2, lightY - 2, 4, 4);
+        ctx.fillRect(light2X - 2, lightY - 2, 4, 4);
+        ctx.shadowBlur = 0;
+    }
+
+    drawFogLightCone(ctx, lightX, lightY, alpha) {
+        const coneLength = 90;
+        const coneSpread = 50; // Qué tan ancho se vuelve el cono al final
+
+        const gradient = ctx.createLinearGradient(lightX, lightY, lightX + coneLength, lightY);
+        gradient.addColorStop(0, `rgba(255, 220, 150, ${alpha})`);
+        gradient.addColorStop(1, 'rgba(255, 220, 150, 0)');
+
+        ctx.fillStyle = gradient;
+        ctx.beginPath();
+        ctx.moveTo(lightX, lightY - 3); // Empieza ligeramente por encima del centro de la luz
+        ctx.lineTo(lightX + coneLength, lightY - coneSpread / 2 + 20); // Apunta ligeramente hacia abajo
+        ctx.lineTo(lightX + coneLength, lightY + coneSpread / 2 + 20);
+        ctx.lineTo(lightX, lightY + 3); // Termina ligeramente por debajo del centro
         ctx.closePath();
         ctx.fill();
     }

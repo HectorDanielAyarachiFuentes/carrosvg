@@ -24,6 +24,7 @@ const state = {
     lastTime: 0,
     cycleProgress: 0, // 0 a 1
     isNight: false,
+    fogIntensity: 0, // 0 a 1, calculado en update
     truckSpeedMultiplier: 1.0,
     windStrength: 20, // Viento que afecta a árboles y humo
     assets: {},
@@ -75,8 +76,25 @@ function update(deltaTime) {
     state.cycleProgress = (state.lastTime % Config.CYCLE_DURATION) / Config.CYCLE_DURATION;
     state.isNight = state.cycleProgress >= 0.60 && state.cycleProgress < 0.90;
 
-    // Actualizar la fuerza del viento con una oscilación suave
-    state.windStrength = Math.sin(state.lastTime / 4000) * 15 + 20; // Varia entre 5 y 35
+    // --- MODIFICADO: Viento más fuerte y con más variación ---
+    state.windStrength = Math.sin(state.lastTime / 5000) * 25 + 35; // Varia entre 10 y 60
+
+    // --- NUEVO: Calcular intensidad de la niebla para que esté disponible globalmente ---
+    const progress = state.cycleProgress;
+    let intensity = 0;
+    const FOG_APPEAR_START = 0.95;
+    const FOG_PEAK_END = 0.05;
+    const FOG_FADE_END = 0.20;
+    if (progress >= FOG_APPEAR_START) {
+        const t = (progress - FOG_APPEAR_START) / (1.0 - FOG_APPEAR_START);
+        intensity = t;
+    } else if (progress < FOG_PEAK_END) {
+        intensity = 1.0;
+    } else if (progress < FOG_FADE_END) {
+        const t = (progress - FOG_PEAK_END) / (FOG_FADE_END - FOG_PEAK_END);
+        intensity = 1.0 - t;
+    }
+    state.fogIntensity = intensity;
 
     // Actualizar elementos del escenario
     state.elements.mountains.forEach(m => m.update(deltaTime, state.truckSpeedMultiplier));
@@ -86,7 +104,8 @@ function update(deltaTime) {
     state.elements.cows.forEach(c => c.update(deltaTime, state.truckSpeedMultiplier));
     state.elements.billboards.forEach(b => b.update(deltaTime, state.truckSpeedMultiplier)); // Actualiza los carteles
     state.elements.critters.forEach(c => c.update(deltaTime, state.truckSpeedMultiplier, state.cycleProgress));
-    state.elements.raindrops.forEach(r => r.update(deltaTime));
+    // --- MODIFICADO: Pasar la fuerza del viento a las gotas de lluvia ---
+    state.elements.raindrops.forEach(r => r.update(deltaTime, state.windStrength));
 
     // Actualizar elementos principales
     state.elements.truck.update(deltaTime, state.isNight, state.windStrength);
@@ -147,8 +166,13 @@ function draw(ctx, timestamp) { // Recibe timestamp para animaciones consistente
     state.elements.cows.forEach(c => c.draw(ctx, state.assets.cow));
     state.elements.critters.forEach(c => c.draw(ctx)); // Dibuja los animales
     
-    state.elements.truck.draw(ctx, state.assets.truck, state.assets.wheels);
+    // --- MODIFICADO: Pasar isNight y fogIntensity para controlar las luces del camión ---
+    state.elements.truck.draw(ctx, state.assets.truck, state.assets.wheels, state.isNight, state.fogIntensity);
     state.elements.radio.draw(ctx);
+
+    // --- NUEVO: Dibujar la niebla matutina ---
+    // Se dibuja como una capa final para afectar a todos los elementos del escenario.
+    drawFog(ctx);
 
     // Efectos (se dibujan encima de sus objetivos)
     state.elements.ufo.drawBeams(ctx, state.assets.cow);
@@ -253,6 +277,31 @@ function drawStars(ctx) {
         ctx.fill();
     });
     ctx.globalAlpha = 1;
+}
+
+/**
+ * Dibuja una capa de niebla baja durante el amanecer y la mañana.
+ * La intensidad de la niebla varía según la hora del día.
+ * @param {CanvasRenderingContext2D} ctx El contexto del canvas.
+ */
+function drawFog(ctx) {
+    // --- MODIFICADO: Usar la intensidad de niebla precalculada en el estado ---
+    const intensity = state.fogIntensity;
+
+    if (intensity <= 0) return;
+
+    const maxFogAlpha = 0.75;
+    const fogAlpha = intensity * maxFogAlpha;
+
+    const fogHeight = 140; // Altura de la niebla desde el suelo
+    const groundY = Config.CANVAS_HEIGHT;
+    const gradient = ctx.createLinearGradient(0, groundY - fogHeight, 0, groundY);
+    gradient.addColorStop(0, `rgba(200, 210, 220, 0)`);
+    gradient.addColorStop(0.5, `rgba(200, 210, 220, ${fogAlpha * 0.8})`);
+    gradient.addColorStop(1, `rgba(220, 225, 230, ${fogAlpha})`);
+
+    ctx.fillStyle = gradient;
+    ctx.fillRect(0, groundY - fogHeight, Config.CANVAS_WIDTH, fogHeight);
 }
 
 function createParticleBurst(x, y, count) {

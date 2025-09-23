@@ -39,22 +39,28 @@ export default class RainDrop {
         
         // La Z simulada afecta la velocidad, el tamaño y el color
         const z = Math.random();
+        this.z = z; // Guardar z para usarlo en el cálculo del viento
         this.len = z * 15 + 10;
         this.speed = z * 8 + 4;
         this.lineWidth = z * 1.2 + 0.5;
         this.opacity = z * 0.3 + 0.2;
 
-        this.wind = 2; // Inclinación por el viento
+        this.currentWindSpeed = 0; // Velocidad horizontal actual, calculada en update
 
         this.isSplashed = false;
         this.splashParticles = [];
     }
 
-    update(deltaTime) {
+    update(deltaTime, windStrength) {
         if (!this.isSplashed) {
             const dtFactor = deltaTime / 16.67;
             this.y += this.speed * dtFactor;
-            this.x += this.wind * dtFactor;
+
+            // --- NUEVO: Viento dinámico ---
+            // La fuerza del viento global (10-60) se traduce en una velocidad horizontal.
+            // Las gotas más cercanas (z más alto) son más afectadas por el viento.
+            this.currentWindSpeed = (windStrength / 10) * (this.z * 0.5 + 0.5);
+            this.x += this.currentWindSpeed * dtFactor;
 
             if (this.y > Config.CANVAS_HEIGHT) {
                 this.isSplashed = true;
@@ -87,7 +93,7 @@ export default class RainDrop {
     draw(ctx) {
         ctx.save();
         if (!this.isSplashed) {
-            const gradient = ctx.createLinearGradient(this.x, this.y, this.x + this.wind, this.y + this.len);
+            const gradient = ctx.createLinearGradient(this.x, this.y, this.x + this.currentWindSpeed, this.y + this.len);
             gradient.addColorStop(0, `rgba(180, 200, 230, 0)`);
             gradient.addColorStop(0.5, `rgba(200, 220, 255, ${this.opacity})`);
             gradient.addColorStop(1, `rgba(220, 240, 255, 0)`);
@@ -102,7 +108,7 @@ export default class RainDrop {
 
             ctx.beginPath();
             ctx.moveTo(this.x, this.y);
-            ctx.lineTo(this.x + this.wind, this.y + this.len);
+            ctx.lineTo(this.x + this.currentWindSpeed, this.y + this.len);
             ctx.stroke();
         } else {
             // Dibujar las partículas de la salpicadura
