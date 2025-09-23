@@ -908,11 +908,11 @@ document.addEventListener('DOMContentLoaded', () => {
     async function start() {
         try {
             [truckImg, wheelsImg, treeImg, cowImg, mooSoundBuffer] = await Promise.all([
-                loadImage('truck.svg'),
-                loadImage('wheels.svg'),
-                loadImage('tree.svg'),
-                loadImage('cow.svg'), // Cargar la imagen de la vaca
-                loadAudio('moo.mp3') // Cargar el sonido de la vaca
+                loadImage('svg/truck.svg'),
+                loadImage('svg/wheels.svg'),
+                loadImage('svg/tree.svg'),
+                loadImage('svg/cow.svg'), // Cargar la imagen de la vaca
+                loadAudio('sonidos/moo.mp3') // Cargar el sonido de la vaca
             ]);
 
             // Ahora que tenemos la imagen de la vaca, podemos inicializarlas
