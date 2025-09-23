@@ -329,10 +329,8 @@ async function start() {
         state.elements.trees = Array.from({ length: 4 }, () => new Tree(treeImg));
         state.elements.cows = Array.from({ length: 3 }, () => new Cow(cowImg));
         // Instancia los carteles, eligiendo una imagen al azar de las disponibles
-        state.elements.billboards = Array.from({ length: 2 }, () => {
-            const randomImg = state.assets.billboardImages[Math.floor(Math.random() * state.assets.billboardImages.length)];
-            return new Billboard(randomImg);
-        });
+        // Pasamos el array completo de imágenes para que cada cartel pueda cambiarla al resetearse.
+        state.elements.billboards = Array.from({ length: 2 }, () => new Billboard(state.assets.billboardImages));
         state.elements.raindrops = Array.from({ length: 200 }, () => new RainDrop());
         state.elements.stars = Array.from({ length: 100 }, () => ({
             x: Math.random() * Config.CANVAS_WIDTH,

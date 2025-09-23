@@ -1,11 +1,19 @@
 import * as Config from '../js/config.js';
 
+const BANNER_TEXTS = [
+    "Dulce",
+    "Te Quiero",
+    "Sonríe",
+    "Hola Mundo",
+    "Feliz Día",
+    "Carretera y Manta"
+];
+
 export default class Biplane {
     /**
      * @param {HTMLImageElement} pilotImg La imagen para el piloto.
-     * @param {string} bannerText El texto que aparecerá en el cartel.
      */
-    constructor(pilotImg, bannerText = "Dulce") {
+    constructor(pilotImg) {
         this.x = -300; // Empezar fuera de la pantalla
         this.pilotImg = pilotImg;
         this.y = 120;
@@ -16,11 +24,23 @@ export default class Biplane {
         this.bobbingAngle = Math.random() * Math.PI * 2; // Para un suave balanceo
 
         // Propiedades del cartel
-        this.bannerText = bannerText;
-        this.bannerWidth = 150; // Un poco más grande para el texto
+        this.bannerText = ""; // Inicia vacío
+        this.bannerWidth = 150; // Valor por defecto
         this.bannerHeight = 45;
         this.bannerOffset = { x: -200, y: 10 }; // Ajustado para la nueva escala
         this.bannerWaveAngle = 0;
+
+        this.setNewBanner(); // Elige el primer texto y ajusta el tamaño del cartel
+    }
+
+    setNewBanner() {
+        this.bannerText = BANNER_TEXTS[Math.floor(Math.random() * BANNER_TEXTS.length)];
+
+        // Estimamos el ancho del cartel basado en la longitud del texto.
+        // Esto es una aproximación que funciona bien para la mayoría de las fuentes.
+        const estimatedCharWidth = 18; // Ancho promedio por caracter
+        const padding = 40; // 20px de espacio a cada lado del texto
+        this.bannerWidth = this.bannerText.length * estimatedCharWidth + padding;
     }
 
     update(deltaTime, isNight) {
@@ -43,6 +63,8 @@ export default class Biplane {
         if (this.x > Config.CANVAS_WIDTH + 200) {
             this.x = -300 - (this.bannerWidth * this.scale);
             this.y = 100 + Math.random() * 50;
+            // Elegir un nuevo texto y ajustar el tamaño del cartel para la siguiente pasada
+            this.setNewBanner();
         }
     }
 

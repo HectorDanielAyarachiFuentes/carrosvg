@@ -1,19 +1,35 @@
 import * as Config from '../js/config.js';
 
 export default class Billboard {
-    constructor(billboardImg) {
-        this.billboardImg = billboardImg;
+    constructor(billboardImages) {
+        // Ahora recibe un array de imágenes
+        this.billboardImages = billboardImages || [];
+        this.billboardImg = null; // La imagen actual se elegirá en reset()
+
         this.baseSpeed = Math.random() * 50 + 100; // px/s, velocidad base
-        // Se ajusta a 0.4-0.7 para un tamaño más visible y realista, como indicaba el comentario original.
-        this.scale = Math.random() * 0.1 + 0.1;
-        this.speed = this.baseSpeed * (1.5 - this.scale); // Parallax: más pequeños (lejanos) se mueven más lento
-        this.width = (this.billboardImg ? this.billboardImg.width : 100) * this.scale;
-        this.height = (this.billboardImg ? this.billboardImg.height : 50) * this.scale;
+        
+        // Las propiedades de tamaño y velocidad se inicializan en reset()
+        this.scale = 1;
+        this.speed = this.baseSpeed;
+        this.width = 100;
+        this.height = 50;
+
         this.reset();
     }
 
     reset() {
-        // Posiciona el cartel fuera de la pantalla a la derecha, con algo de aleatoriedad
+        // 1. Elige una nueva imagen aleatoria del array
+        if (this.billboardImages.length > 0) {
+            this.billboardImg = this.billboardImages[Math.floor(Math.random() * this.billboardImages.length)];
+        }
+
+        // 2. Elige un nuevo tamaño aleatorio para más variedad
+        this.scale = Math.random() * 0.1 + 0.15; // Rango de 0.15 a 0.55 para que se vean más pequeños
+        this.speed = this.baseSpeed * this.scale; // Parallax: más grandes (cercanos) se mueven más rápido
+        this.width = (this.billboardImg ? this.billboardImg.width : 100) * this.scale;
+        this.height = (this.billboardImg ? this.billboardImg.height : 50) * this.scale;
+
+        // Posiciona el cartel fuera de la pantalla a la derecha, con algo de aleatoriedad en la distancia
         this.x = Config.CANVAS_WIDTH + Math.random() * Config.CANVAS_WIDTH * 2.5;
         // Posiciona el cartel por encima del suelo, con algo de variación vertical
         this.y = Config.CANVAS_HEIGHT - this.height - (Math.random() * 20 + 30);
