@@ -2,6 +2,13 @@ document.addEventListener('DOMContentLoaded', () => {
     const canvas = document.getElementById('animationCanvas');
     const ctx = canvas.getContext('2d');
 
+    // --- Configuración de Audio ---
+    let audioCtx;
+    const AudioContext = window.AudioContext || window.webkitAudioContext;
+    if (AudioContext) {
+        audioCtx = new AudioContext();
+    }
+
     // --- Configuración ---
     const CANVAS_WIDTH = 600;
     const CANVAS_HEIGHT = 250;
@@ -29,7 +36,22 @@ document.addEventListener('DOMContentLoaded', () => {
         img.src = src;
     });
 
-    let truckImg, wheelsImg, treeImg, cowImg;
+    const loadAudio = src => new Promise((resolve, reject) => {
+        if (!audioCtx) {
+            resolve(null); // No hay soporte de audio o está deshabilitado
+            return;
+        }
+        fetch(src)
+            .then(response => response.arrayBuffer())
+            .then(arrayBuffer => audioCtx.decodeAudioData(arrayBuffer))
+            .then(audioBuffer => resolve(audioBuffer))
+            .catch(error => {
+                console.warn(`No se pudo cargar el audio: ${src}`, error);
+                resolve(null); // Resuelve como nulo para no bloquear la animación
+            });
+    });
+
+    let truckImg, wheelsImg, treeImg, cowImg, mooSoundBuffer;
 
     // --- Estado de la animación ---
     let lastTime = 0;
@@ -486,6 +508,13 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (potentialTarget) {
                     ufo.targetCow = potentialTarget;
                     ufo.targetCow.isAbducted = true;
+                    // Reproducir sonido "Muuu"
+                    if (audioCtx && mooSoundBuffer && audioCtx.state === 'running') {
+                        const source = audioCtx.createBufferSource();
+                        source.buffer = mooSoundBuffer;
+                        source.connect(audioCtx.destination);
+                        source.start(0);
+                    }
                 }
             }
 
@@ -768,6 +797,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // --- Control por Teclado ---
     window.addEventListener('keydown', (e) => {
+        // El navegador requiere interacción del usuario para iniciar el audio
+        if (audioCtx && audioCtx.state === 'suspended') {
+            audioCtx.resume();
+        }
+
         if (keys.hasOwnProperty(e.key)) {
             keys[e.key] = true;
         }
@@ -781,11 +815,12 @@ document.addEventListener('DOMContentLoaded', () => {
     // --- Iniciar la animación ---
     async function start() {
         try {
-            [truckImg, wheelsImg, treeImg, cowImg] = await Promise.all([
+            [truckImg, wheelsImg, treeImg, cowImg, mooSoundBuffer] = await Promise.all([
                 loadImage('truck.svg'),
                 loadImage('wheels.svg'),
                 loadImage('tree.svg'),
-                loadImage('cow.svg') // Cargar la imagen de la vaca
+                loadImage('cow.svg'), // Cargar la imagen de la vaca
+                loadAudio('moo.mp3') // Cargar el sonido de la vaca
             ]);
 
             // Ahora que tenemos la imagen de la vaca, podemos inicializarlas
