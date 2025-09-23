@@ -1,5 +1,6 @@
 import * as Config from '../js/config.js';
 import SmokeParticle from './SmokeParticle.js';
+import SkidMark from './SkidMark.js';
 import DustParticle from './DustParticle.js';
 import SplashParticle from './SplashParticle.js';
 
@@ -18,6 +19,7 @@ export default class Truck {
         this.dustParticles = [];
         this.splashParticles = [];
         this.smokeEmitterCounter = 0;
+        this.skidEmitterCounter = 0;
         this.dustEmitterCounter = 0;
         this.splashEmitterCounter = 0;
     }
@@ -36,13 +38,13 @@ export default class Truck {
         }
     }
 
-    update(deltaTime, isNight, windStrength) {
+    update(deltaTime, isNight, windStrength, keys, addSkidMark) {
         // Rebote
         this.bounceAngle += deltaTime * 0.01 * this.speedMultiplier;
         this.y = this.baseY - Math.sin(this.bounceAngle) * 2;
 
         // Emisores de partículas
-        this.updateEmitters(deltaTime, isNight);
+        this.updateEmitters(deltaTime, isNight, keys, addSkidMark);
 
         // Actualizar partículas
         this.smokeParticles.forEach((p, i) => {
@@ -59,7 +61,7 @@ export default class Truck {
         });
     }
 
-    updateEmitters(deltaTime, isNight) {
+    updateEmitters(deltaTime, isNight, keys, addSkidMark) {
         // Humo
         this.smokeEmitterCounter += deltaTime;
         const smokeInterval = Math.max(80, 300 / this.speedMultiplier);
@@ -68,6 +70,21 @@ export default class Truck {
             const pipeX = this.x + this.pipeOffsetX;
             const pipeY = this.y + this.pipeOffsetY;
             this.smokeParticles.push(new SmokeParticle(pipeX - 10, pipeY, isNight, this.speedMultiplier));
+        }
+
+        // --- NUEVO: Marcas de neumáticos y humo al frenar bruscamente ---
+        const isBrakingHard = keys.ArrowLeft && this.speedMultiplier > 1.2;
+        if (isBrakingHard && !isNight) {
+            this.skidEmitterCounter += deltaTime;
+            if (this.skidEmitterCounter > 50) { // Intervalo para no crear demasiadas marcas
+                this.skidEmitterCounter = 0;
+                const wheelX = this.x + 15;
+                const wheelY = Config.CANVAS_HEIGHT - 3;
+                // Añadir marca de neumático a la lista global
+                addSkidMark(new SkidMark(wheelX, wheelY, this.speedMultiplier));
+                // Añadir humo de las ruedas
+                this.smokeParticles.push(new SmokeParticle(wheelX, wheelY - 5, isNight, 0.5, 'rgba(80,80,80,0.6)'));
+            }
         }
 
         if (isNight) {

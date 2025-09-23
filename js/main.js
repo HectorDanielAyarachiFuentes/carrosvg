@@ -11,6 +11,7 @@ import Cow from '../classes/Cow.js';
 import Truck from '../classes/Truck.js';
 import UFO from '../classes/UFO.js';
 import RainDrop from '../classes/RainDrop.js';
+import SkidMark from '../classes/SkidMark.js'; // Importa la nueva clase
 import Radio from '../classes/Radio.js';
 import Billboard from '../classes/Billboard.js'; // Importa la nueva clase Billboard
 import Biplane from '../classes/Biplane.js';
@@ -35,6 +36,7 @@ const state = {
         trees: [],
         cows: [],
         billboards: [], // Añade un array para los carteles publicitarios
+        skidMarks: [], // NUEVO: Array para las marcas de neumáticos
         critters: [], // Array para los nuevos animales
         raindrops: [],
         stars: [],
@@ -106,9 +108,14 @@ function update(deltaTime) {
     state.elements.critters.forEach(c => c.update(deltaTime, state.truckSpeedMultiplier, state.cycleProgress));
     // --- MODIFICADO: Pasar la fuerza del viento a las gotas de lluvia ---
     state.elements.raindrops.forEach(r => r.update(deltaTime, state.windStrength));
+    // --- NUEVO: Actualizar marcas de neumáticos ---
+    state.elements.skidMarks.forEach(sm => sm.update(deltaTime, state.truckSpeedMultiplier));
 
     // Actualizar elementos principales
-    state.elements.truck.update(deltaTime, state.isNight, state.windStrength);
+    // --- MODIFICADO: Pasar `keys` y una función para añadir marcas de neumáticos ---
+    state.elements.truck.update(deltaTime, state.isNight, state.windStrength, keys, (skidMark) => {
+        state.elements.skidMarks.push(skidMark);
+    });
     state.elements.ufo.update(deltaTime, state.cycleProgress, state.elements.trees, state.elements.cows, state.assets.mooSound);
     state.elements.radio.update(deltaTime, keys); // Actualiza el estado de la radio
     state.elements.biplane.update(deltaTime, state.isNight);
@@ -130,6 +137,11 @@ function update(deltaTime) {
         if (p.life <= 0) {
             state.elements.particles.splice(i, 1);
         }
+    }
+    // Limpiar marcas de neumáticos viejas
+    for (let i = state.elements.skidMarks.length - 1; i >= 0; i--) {
+        if (state.elements.skidMarks[i].life <= 0)
+            state.elements.skidMarks.splice(i, 1);
     }
     // Reiniciar vacas para el siguiente ciclo
     if (state.cycleProgress > 0.95) {
@@ -159,6 +171,12 @@ function draw(ctx, timestamp) { // Recibe timestamp para animaciones consistente
     state.elements.clouds.forEach(c => c.draw(ctx));
     state.elements.biplane.draw(ctx);
     state.elements.ufo.draw(ctx);
+
+    // --- NUEVO: Dibujar marcas de neumáticos sobre el "suelo" pero debajo de otros objetos ---
+    state.elements.skidMarks.forEach(sm => sm.draw(ctx));
+    // --- NUEVO: Dibujar distorsión por calor durante el día ---
+    drawHeatShimmer(ctx, timestamp);
+
     state.elements.billboards.forEach(b => b.draw(ctx, state.isNight, state.cycleProgress)); // Dibuja los carteles
     
     // OPTIMIZACIÓN: Pasar timestamp para animaciones consistentes como el balanceo de los árboles
@@ -302,6 +320,46 @@ function drawFog(ctx) {
 
     ctx.fillStyle = gradient;
     ctx.fillRect(0, groundY - fogHeight, Config.CANVAS_WIDTH, fogHeight);
+}
+
+/**
+ * Dibuja un efecto de distorsión por calor sobre el asfalto durante el día.
+ * @param {CanvasRenderingContext2D} ctx El contexto del canvas.
+ * @param {number} timestamp El timestamp actual para la animación.
+ */
+function drawHeatShimmer(ctx, timestamp) {
+    const progress = state.cycleProgress;
+    // El efecto es visible durante el mediodía (0.1 a 0.4 del ciclo)
+    const shimmerStart = 0.1;
+    const shimmerPeak = 0.25;
+    const shimmerEnd = 0.4;
+    let intensity = 0;
+
+    if (progress > shimmerStart && progress < shimmerPeak) {
+        intensity = (progress - shimmerStart) / (shimmerPeak - shimmerStart);
+    } else if (progress >= shimmerPeak && progress < shimmerEnd) {
+        intensity = 1 - ((progress - shimmerPeak) / (shimmerEnd - shimmerPeak));
+    }
+
+    if (intensity <= 0) return;
+
+    const roadY = Config.CANVAS_HEIGHT;
+    const shimmerHeight = 25;
+    const waveAmplitude = 1.5 * intensity;
+    const waveLength = 150;
+
+    ctx.save();
+    // Copiamos una fina franja del canvas (que contiene el asfalto) y la redibujamos con una ondulación.
+    // El propio canvas puede ser la fuente para drawImage.
+    // Esto reemplaza el método erróneo de getImageData y drawImage(imageData.source, ...).
+    ctx.drawImage(
+        ctx.canvas, // La fuente es el canvas actual
+        0, roadY - shimmerHeight, // Coordenadas de la franja a copiar (sx, sy)
+        Config.CANVAS_WIDTH, shimmerHeight, // Tamaño de la franja a copiar (sWidth, sHeight)
+        0, roadY - shimmerHeight + Math.sin(timestamp / 200) * waveAmplitude, // Posición de destino (dx, dy)
+        Config.CANVAS_WIDTH, shimmerHeight // Tamaño de destino (dWidth, dHeight)
+    );
+    ctx.restore();
 }
 
 function createParticleBurst(x, y, count) {
