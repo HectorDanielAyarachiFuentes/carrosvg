@@ -29,7 +29,7 @@ document.addEventListener('DOMContentLoaded', () => {
         img.src = src;
     });
 
-    let truckImg, wheelsImg, treeImg;
+    let truckImg, wheelsImg, treeImg, cowImg;
 
     // --- Estado de la animación ---
     let lastTime = 0;
@@ -248,6 +248,49 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
+    // Vaca
+    class Cow {
+        constructor() {
+            this.speed = 150; // px/s, se mueve con los árboles
+            this.scale = Math.random() * 0.1 + 0.15; // Las vacas son pequeñas
+            this.isAbducted = false;
+            this.abductionProgress = 0;
+            this.visible = true;
+            // La posición Y inicial depende de la altura de la imagen.
+            // La estableceremos después de cargar la imagen.
+            this.initialY = CANVAS_HEIGHT - 20;
+            this.reset();
+        }
+
+        reset() {
+            this.x = CANVAS_WIDTH + Math.random() * CANVAS_WIDTH * 1.5;
+            this.y = this.initialY;
+            this.isAbducted = false;
+            this.abductionProgress = 0;
+            this.visible = true;
+        }
+
+        update(deltaTime) {
+            if (!this.isAbducted) {
+                this.x -= this.speed * truckSpeedMultiplier * (deltaTime / 1000);
+                if (this.x < -100) {
+                    this.reset();
+                }
+            }
+        }
+
+        draw(ctx) {
+            if (cowImg && this.visible) {
+                const currentScale = this.scale * (1 - this.abductionProgress);
+                const imgWidth = cowImg.width * currentScale;
+                const imgHeight = cowImg.height * currentScale;
+                // Dibuja la vaca centrada horizontalmente mientras es abducida
+                const drawX = this.isAbducted ? this.x - imgWidth / 2 : this.x;
+                ctx.drawImage(cowImg, drawX, this.y, imgWidth, imgHeight);
+            }
+        }
+    }
+
     // --- Inicialización de objetos ---
     const mountains = [
         new SceneryObject(100, CANVAS_HEIGHT + 100, 120, 1),
@@ -262,7 +305,8 @@ document.addEventListener('DOMContentLoaded', () => {
     ];
 
     const clouds = [new Cloud(), new Cloud(), new Cloud()];
-    const trees = [new Tree(), new Tree(), new Tree()];
+    const trees = [new Tree(), new Tree(), new Tree(), new Tree()]; // Un árbol más para poblar
+    let cows = []; // Se inicializará después de cargar la imagen de la vaca
     const raindrops = Array.from({ length: 200 }, () => new RainDrop());
     const stars = Array.from({ length: 100 }, () => ({
         x: Math.random() * CANVAS_WIDTH,
@@ -293,16 +337,8 @@ document.addEventListener('DOMContentLoaded', () => {
         width: 60,
         height: 18,
         lightsAngle: 0,
-        visible: false
-    };
-
-    const rock = {
-        x: CANVAS_WIDTH + 200,
-        y: CANVAS_HEIGHT - 10,
-        speed: (CANVAS_WIDTH + 200 - 280) / (CYCLE_DURATION * 0.74), // Speed to reach abduction spot
-        isAbducted: false,
-        abductionProgress: 0,
-        visible: true
+        visible: false,
+        targetCow: null // Propiedad para rastrear la vaca que se está abduciendo
     };
 
     const lightning = {
@@ -425,46 +461,65 @@ document.addEventListener('DOMContentLoaded', () => {
             if (p.life <= 0) splashParticles.splice(i, 1);
         });
 
-        // Actualizar UFO y abducción de la roca
+        // Actualizar vacas
+        cows.forEach(cow => cow.update(deltaTime));
+
+        // Actualizar UFO y lógica de abducción de vacas
         ufo.visible = cycleProgress > 0.55 && cycleProgress < 0.95;
         if (ufo.visible) {
             const ufoCycle = (cycleProgress - 0.55) / (0.95 - 0.55);
             ufo.x = lerp(-100, CANVAS_WIDTH + 50, ufoCycle);
             ufo.y = lerp(60, 100, ufoCycle);
             ufo.lightsAngle += deltaTime * 0.01;
-        }
 
-        // Lógica de la roca
-        if (rock.visible) {
-            if (!rock.isAbducted) {
-                rock.x -= rock.speed * deltaTime;
-                // Comprobar si empieza la abducción
-                if (cycleProgress >= 0.74 && cycleProgress < 0.78) {
-                    rock.isAbducted = true;
+            // --- Lógica de Abducción ---
+            const abductionWindowStart = 0.72;
+            const abductionWindowEnd = 0.82;
+
+            // 1. Buscar una vaca para abducir
+            if (!ufo.targetCow && cycleProgress > abductionWindowStart && cycleProgress < abductionWindowEnd) {
+                // Busca una vaca visible que esté debajo del UFO
+                const potentialTarget = cows.find(cow =>
+                    cow.visible && !cow.isAbducted &&
+                    cow.x > ufo.x && cow.x < ufo.x + ufo.width
+                );
+                if (potentialTarget) {
+                    ufo.targetCow = potentialTarget;
+                    ufo.targetCow.isAbducted = true;
                 }
-            } else {
-                // La abducción dura del 74% al 78% del ciclo
-                const abductionDuration = CYCLE_DURATION * (0.78 - 0.74);
-                rock.abductionProgress += deltaTime / abductionDuration;
-                rock.abductionProgress = Math.min(1, rock.abductionProgress);
+            }
 
-                rock.y = lerp(CANVAS_HEIGHT - 10, ufo.y, rock.abductionProgress);
-                rock.x = lerp(280, ufo.x + ufo.width / 2, rock.abductionProgress);
+            // 2. Realizar la abducción
+            if (ufo.targetCow) {
+                const cow = ufo.targetCow;
+                const abductionDuration = CYCLE_DURATION * (abductionWindowEnd - abductionWindowStart);
+                cow.abductionProgress += deltaTime / abductionDuration;
+                cow.abductionProgress = Math.min(1, cow.abductionProgress);
 
-                if (rock.abductionProgress >= 1) {
-                    rock.visible = false;
+                // Interpolar la posición de la vaca hacia el UFO
+                cow.y = lerp(cow.initialY, ufo.y, cow.abductionProgress);
+                cow.x = lerp(cow.x, ufo.x + ufo.width / 2, cow.abductionProgress * 0.2); // La atrae un poco al centro
+
+                // 3. Finalizar la abducción
+                if (cow.abductionProgress >= 1) {
+                    cow.visible = false; // La vaca desaparece
+                    ufo.targetCow = null; // El UFO queda libre para la próxima noche
                 }
+            }
+        } else {
+            // Si el UFO se va, suelta a la vaca (si la tenía)
+            if (ufo.targetCow) {
+                ufo.targetCow.isAbducted = false;
+                ufo.targetCow = null;
             }
         }
 
-        // Reiniciar roca para el siguiente ciclo
-        if (cycleProgress > 0.9 && !rock.visible && rock.abductionProgress >= 1) {
-            rock.x = CANVAS_WIDTH + 200;
-            rock.y = CANVAS_HEIGHT - 10;
-            rock.isAbducted = false;
-            rock.abductionProgress = 0;
-            rock.visible = true;
-        }
+        // Reiniciar vacas para el siguiente ciclo
+        cows.forEach(cow => {
+            if (cycleProgress > 0.95 && !cow.visible) {
+                cow.reset();
+            }
+        });
     }
 
     // --- Funciones de Dibujo (Draw) ---
@@ -625,17 +680,19 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!ufo.visible) return;
 
         ctx.save();
-        // Rayo tractor
-        if (cycleProgress > 0.75 && cycleProgress < 0.78) {
-            const beamProgress = (cycleProgress - 0.75) / 0.03;
-            const beamAlpha = Math.sin(beamProgress * Math.PI); // Fade in y out rápido
+        // Rayo tractor si está abduciendo una vaca
+        if (ufo.targetCow) {
+            const cow = ufo.targetCow;
+            // Efecto de energía pulsante para el rayo
+            const beamAlpha = (Math.sin(cow.abductionProgress * Math.PI * 4) + 1) / 2 * 0.4;
 
-            ctx.fillStyle = `rgba(173, 216, 230, ${beamAlpha * 0.4})`;
+            ctx.fillStyle = `rgba(173, 216, 230, ${beamAlpha})`;
             ctx.beginPath();
-            ctx.moveTo(ufo.x + ufo.width * 0.25, ufo.y + ufo.height);
-            ctx.lineTo(ufo.x + ufo.width * 0.75, ufo.y + ufo.height);
-            ctx.lineTo(rock.x + 10, rock.y);
-            ctx.lineTo(rock.x - 10, rock.y);
+            ctx.moveTo(ufo.x + ufo.width * 0.25, ufo.y + ufo.height / 2);
+            ctx.lineTo(ufo.x + ufo.width * 0.75, ufo.y + ufo.height / 2);
+            const cowImgWidth = cowImg ? cowImg.width * cow.scale * (1 - cow.abductionProgress) : 20;
+            ctx.lineTo(cow.x + cowImgWidth, cow.y);
+            ctx.lineTo(cow.x, cow.y);
             ctx.closePath();
             ctx.fill();
         }
@@ -662,21 +719,6 @@ document.addEventListener('DOMContentLoaded', () => {
         });
         ctx.globalAlpha = 1.0;
 
-        ctx.restore();
-    }
-
-    function drawRock() {
-        if (!rock.visible) return;
-
-        const scale = 1 - rock.abductionProgress;
-        ctx.save();
-        ctx.fillStyle = '#ddd';
-        ctx.beginPath();
-        // Dibuja la roca como 3 círculos, similar al box-shadow del CSS
-        ctx.arc(rock.x, rock.y, 5 * scale, 0, Math.PI * 2);
-        ctx.arc(rock.x + 10 * scale, rock.y, 10 * scale, 0, Math.PI * 2);
-        ctx.arc(rock.x - 10 * scale, rock.y, 5 * scale, 0, Math.PI * 2);
-        ctx.fill();
         ctx.restore();
     }
 
@@ -714,7 +756,7 @@ document.addEventListener('DOMContentLoaded', () => {
         clouds.forEach(c => c.draw(ctx));
         drawUFO(); // El UFO está detrás de los árboles
         trees.forEach(t => t.draw(ctx));
-        if (rock.visible) drawRock();
+        cows.forEach(c => c.draw(ctx));
         drawTruck();
 
         // El relámpago se dibuja al final para que ilumine toda la escena
@@ -739,11 +781,21 @@ document.addEventListener('DOMContentLoaded', () => {
     // --- Iniciar la animación ---
     async function start() {
         try {
-            [truckImg, wheelsImg, treeImg] = await Promise.all([
+            [truckImg, wheelsImg, treeImg, cowImg] = await Promise.all([
                 loadImage('truck.svg'),
                 loadImage('wheels.svg'),
-                loadImage('tree.svg')
+                loadImage('tree.svg'),
+                loadImage('cow.svg') // Cargar la imagen de la vaca
             ]);
+
+            // Ahora que tenemos la imagen de la vaca, podemos inicializarlas
+            cows = Array.from({ length: 3 }, () => new Cow());
+            cows.forEach(cow => {
+                // Ajustamos la Y inicial ahora que conocemos la altura de la imagen
+                cow.initialY = CANVAS_HEIGHT - (cowImg.height * cow.scale) + 5;
+                cow.y = cow.initialY;
+            });
+
             // Una vez cargadas las imágenes, comienza la animación
             requestAnimationFrame(animate);
         } catch (error) {

@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="60" height="40" viewBox="0 0 60 40">
+  <!-- Cuerpo -->
+  <path fill="#FFF" d="M5,15 Q10,5 30,10 T55,15 L55,30 Q30,40 5,30 Z"/>
+  <!-- Cabeza -->
+  <circle fill="#FFF" cx="50" cy="15" r="8"/>
+  <circle fill="#000" cx="53" cy="13" r="1.5"/>
+  <!-- Manchas -->
+  <path fill="#000" d="M15,20 Q20,15 25,20 T35,18 Q40,25 30,30 Z"/>
+  <path fill="#000" d="M45,22 Q50,20 52,25 T45,28 Z"/>
+  <!-- Patas -->
+  <rect fill="#FFF" x="15" y="28" width="5" height="12"/>
+  <rect fill="#FFF" x="35" y="28" width="5" height="12"/>
+</svg>
