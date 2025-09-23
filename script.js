@@ -350,8 +350,8 @@ document.addEventListener('DOMContentLoaded', () => {
         if (smokeEmitterCounter > smokeInterval) {
             smokeEmitterCounter = 0;
             // El humo sale de la punta del tubo de escape
-            const pipeX = truck.x + 5;
-            const pipeY = truck.y + 15;
+            const pipeX = truck.x + 45; // Movido más atrás, cerca del centro
+            const pipeY = truck.y + 50; // Movido abajo, al nivel del chasis/depósito
             smokeParticles.push(new SmokeParticle(pipeX - 10, pipeY));
         }
         smokeParticles.forEach((p, i) => {
@@ -502,8 +502,8 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         // Tubo de escape (dibujado encima del camión)
-        const pipeX = truck.x + 5;
-        const pipeY = truck.y + 15;
+        const pipeX = truck.x + 45; // Movido más atrás, cerca del centro
+        const pipeY = truck.y + 50; // Movido abajo, al nivel del chasis/depósito
         ctx.fillStyle = '#3d3d3d'; // Metal oscuro
         ctx.fillRect(pipeX - 8, pipeY - 2, 8, 4); // El tubo horizontal
         ctx.fillStyle = '#222222'; // La apertura oscura
