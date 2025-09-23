@@ -295,6 +295,20 @@ function setupMobileControls() {
     });
 }
 
+// --- NUEVO: Función para precargar la primera pista de música en segundo plano ---
+/**
+ * Carga la primera pista de audio sin bloquear el inicio de la animación.
+ * @param {Array} musicTracks - El array de pistas de música.
+ * @param {AudioContext} audioCtx - El contexto de audio.
+ */
+function preloadFirstTrack(musicTracks, audioCtx) {
+    if (musicTracks.length > 0 && !musicTracks[0].buffer) {
+        loadAudio(musicTracks[0].src, audioCtx).then(buffer => {
+            musicTracks[0].buffer = buffer;
+        }).catch(err => console.error('Error al precargar la canción:', err));
+    }
+}
+
 // --- Función de Inicio ---
 async function start() {
     const canvas = document.getElementById('animationCanvas');
@@ -310,6 +324,8 @@ async function start() {
     setupInputHandlers();
     setupMobileControls();
     
+    const audioCtx = getAudioContext();
+
     try {
         // Cargar todos los assets en paralelo
         // NOTA: Debes reemplazar los archivos placeholder con tus propios MP3
@@ -318,8 +334,8 @@ async function start() {
             loadImage('svg/wheels.svg'),
             loadImage('svg/tree.svg'),
             loadImage('svg/cow.svg'),
-            loadImage('img/dulcepiloto.png'),
-            loadAudio('sonidos/moo.mp3', getAudioContext()),
+            loadImage('img/dulcepiloto.png'), // Este es el piloto
+            loadAudio('sonidos/moo.mp3', audioCtx),
             loadImage('img/dulce-cartel-1.jpg'),
             loadImage('img/dulce-cartel-2.jpg'), // Cargar la segunda imagen para el cartel
         ]);
@@ -336,6 +352,9 @@ async function start() {
             { src: 'sonidos/Rakim-Ken-Y-Quedate-Junto-A-Mi.mp3', name: 'Carretera Infinita', buffer: null },
             { src: 'sonidos/Ken-Y-Ese-no-soy-yo-Video-Oficial-Kenny.mp3', name: 'Ritmo Nocturno', buffer: null }
         ];
+
+        // Inicia la precarga de la primera canción sin bloquear el renderizado
+        preloadFirstTrack(musicTracks, audioCtx);
 
         // Inicializar todos los objetos de la animación
         state.elements.truck = new Truck();

@@ -17,6 +17,7 @@ export default class HUD {
         this.typewriterTimer = 0;
         this.typewriterSpeed = 40; // ms per character
         this.isTyping = false;
+        this.lastDisplayedTime = ''; // Para optimizar updates del DOM
 
         // --- Glitch and Pulse state ---
         this.glitchCooldown = 8000; // Time until next possible glitch
@@ -71,7 +72,12 @@ export default class HUD {
             const formattedHours = String(hours).padStart(2, '0');
             const formattedMinutes = String(minutes).padStart(2, '0');
 
-            this.timeDisplayElement.textContent = `${formattedHours}:${formattedMinutes}`;
+            const timeString = `${formattedHours}:${formattedMinutes}`;
+            // OPTIMIZACIÓN: Actualizar el DOM solo si la hora (en minutos) ha cambiado.
+            if (timeString !== this.lastDisplayedTime) {
+                this.timeDisplayElement.textContent = timeString;
+                this.lastDisplayedTime = timeString;
+            }
         }
 
         // Actualizar el indicador de velocidad

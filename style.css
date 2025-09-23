@@ -360,7 +360,12 @@ canvas {
 }
 
 /* Aplicar el glitch de texto a los elementos internos */
-.glitch-active > * {
+/* Hacemos los selectores más específicos para mejorar el rendimiento del renderizado. */
+.glitch-active > #hud-day-night-icon,
+.glitch-active > #hud-controls,
+.glitch-active > #hud-now-playing,
+.glitch-active > #hud-speed-display,
+.glitch-active > .control-group {
     animation: glitch-text-shadow 0.07s linear infinite alternate;
 }
 
