@@ -286,17 +286,23 @@ async function start() {
     try {
         // Cargar todos los assets en paralelo
         // NOTA: Debes reemplazar los archivos placeholder con tus propios MP3
-        const [truckImg, wheelsImg, treeImg, cowImg, pilotImg, mooSound] = await Promise.all([
+        const [truckImg, wheelsImg, treeImg, cowImg, pilotImg, mooSound, billboardImg1, billboardImg2] = await Promise.all([
             loadImage('svg/truck.svg'),
             loadImage('svg/wheels.svg'),
             loadImage('svg/tree.svg'),
             loadImage('svg/cow.svg'),
             loadImage('img/dulcepiloto.png'),
             loadAudio('sonidos/moo.mp3', getAudioContext()),
+            loadImage('img/dulce-cartel-1.jpg'),
+            loadImage('img/dulce-cartel-2.jpg'), // Cargar la segunda imagen para el cartel
         ]);
 
         state.assets = { truck: truckImg, wheels: wheelsImg, tree: treeImg, cow: cowImg, pilot: pilotImg, mooSound: mooSound };
-        state.assets.billboard = pilotImg; // Reutiliza la imagen del piloto para el cartel
+        
+        // Crear una lista de imágenes disponibles para los carteles
+        const billboardImages = [pilotImg, billboardImg1, billboardImg2].filter(img => img); // Filtra si alguna imagen no cargó
+        state.assets.billboardImages = billboardImages;
+
         // Definir las canciones para la radio, pero sin cargarlas aún para no bloquear el inicio
         const musicTracks = [
             { src: 'sonidos/Un Montón de Estrellas - Santiago Cañete.mp3', name: 'Un Montón de Estrellas', buffer: null },
@@ -322,7 +328,11 @@ async function start() {
         state.elements.clouds = Array.from({ length: 3 }, () => new Cloud());
         state.elements.trees = Array.from({ length: 4 }, () => new Tree(treeImg));
         state.elements.cows = Array.from({ length: 3 }, () => new Cow(cowImg));
-        state.elements.billboards = Array.from({ length: 2 }, () => new Billboard(state.assets.billboard)); // Instancia un par de carteles
+        // Instancia los carteles, eligiendo una imagen al azar de las disponibles
+        state.elements.billboards = Array.from({ length: 2 }, () => {
+            const randomImg = state.assets.billboardImages[Math.floor(Math.random() * state.assets.billboardImages.length)];
+            return new Billboard(randomImg);
+        });
         state.elements.raindrops = Array.from({ length: 200 }, () => new RainDrop());
         state.elements.stars = Array.from({ length: 100 }, () => ({
             x: Math.random() * Config.CANVAS_WIDTH,
