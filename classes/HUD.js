@@ -7,7 +7,7 @@ export default class HUD {
         this.controlsElement = document.getElementById('hud-controls');
         this.nowPlayingElement = document.getElementById('hud-now-playing');
         this.mobileControlsElement = document.getElementById('mobile-controls');
-        this.dayNightIconElement = document.getElementById('hud-day-night-icon');
+        this.timeDisplayElement = document.getElementById('hud-time-display');
 
         // --- Typewriter state ---
         this.typewriterTargetText = '';
@@ -32,19 +32,13 @@ export default class HUD {
             `;
         }
 
-        // Poblar el icono de día/noche
-        if (this.dayNightIconElement) {
-            this.dayNightIconElement.innerHTML = `
-                <span class="sun">☀️</span>
-                <span class="moon">🌙</span>
-            `;
-            this.sunIcon = this.dayNightIconElement.querySelector('.sun');
-            this.moonIcon = this.dayNightIconElement.querySelector('.moon');
-        }
+        // Obtener referencias a los iconos de día/noche
+        this.sunIcon = document.querySelector('#hud-day-night-icon .sun');
+        this.moonIcon = document.querySelector('#hud-day-night-icon .moon');
     }
 
     // Este método se llamará en cada frame para actualizar partes dinámicas del HUD
-    update(isNight, deltaTime) {
+    update(isNight, deltaTime, cycleProgress) {
         // Aplicar clases de tema al HUD de escritorio
         if (this.hudPanelElement) {
             this.hudPanelElement.classList.toggle('night-mode', isNight);
@@ -61,6 +55,22 @@ export default class HUD {
         if (this.sunIcon && this.moonIcon) {
             this.sunIcon.classList.toggle('visible', !isNight);
             this.moonIcon.classList.toggle('visible', isNight);
+        }
+
+        // Actualizar la hora del ciclo
+        if (this.timeDisplayElement && cycleProgress !== undefined) {
+            const totalMinutesInDay = 24 * 60;
+            const startOffsetMinutes = 6 * 60; // El día empieza a las 06:00
+            const elapsedMinutes = cycleProgress * totalMinutesInDay;
+            const currentTotalMinutes = (startOffsetMinutes + elapsedMinutes) % totalMinutesInDay;
+
+            const hours = Math.floor(currentTotalMinutes / 60);
+            const minutes = Math.floor(currentTotalMinutes % 60);
+
+            const formattedHours = String(hours).padStart(2, '0');
+            const formattedMinutes = String(minutes).padStart(2, '0');
+
+            this.timeDisplayElement.textContent = `${formattedHours}:${formattedMinutes}`;
         }
 
         // --- Rhythm and Glitch Effects ---
