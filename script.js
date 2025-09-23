@@ -130,29 +130,51 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    // Partículas de humo
+    // Partículas de humo mejoradas
     class SmokeParticle {
         constructor(x, y) {
             this.x = x;
             this.y = y;
-            this.size = Math.random() * 5 + 5;
-            this.vx = -(Math.random() * 0.5 + 0.5);
-            this.vy = -(Math.random() * 0.5 + 0.5);
-            this.life = 1; // 1 = 100%
+            this.size = Math.random() * 4 + 2; // Tamaño inicial
+            this.maxSize = Math.random() * 8 + 12; // Tamaño máximo que alcanzará
+
+            // Velocidad en píxeles por segundo. El humo sube y se va hacia atrás.
+            this.vx = -(Math.random() * 40 + 30) * (truckSpeedMultiplier * 0.5 + 0.5);
+            this.vy = -(Math.random() * 30 + 20);
+            
+            this.initialLife = Math.random() * 1.5 + 1.0; // Duración en segundos
+            this.life = this.initialLife;
         }
 
         update(deltaTime) {
-            this.life -= (deltaTime / 1200);
-            this.x += this.vx;
-            this.y += this.vy;
-            this.size += 0.1;
+            const dt = deltaTime / 1000; // delta en segundos
+            this.life -= dt;
+
+            this.x += this.vx * dt;
+            this.y += this.vy * dt;
+            
+            // El "viento" empuja el humo hacia atrás
+            this.vx -= 20 * dt;
         }
 
         draw(ctx) {
-            ctx.fillStyle = `rgba(224, 224, 224, ${Math.max(0, this.life * 0.8)})`;
+            if (this.life <= 0) return;
+
+            const lifeProgress = Math.max(0, this.life / this.initialLife);
+            const currentSize = this.size + (1 - lifeProgress) * (this.maxSize - this.size);
+            const alpha = lifeProgress * 0.4; // Opacidad máxima de 0.4
+
+            ctx.save();
+            const gradient = ctx.createRadialGradient(this.x, this.y, 0, this.x, this.y, currentSize);
+            gradient.addColorStop(0, `rgba(220, 220, 220, ${alpha})`);
+            gradient.addColorStop(0.5, `rgba(200, 200, 200, ${alpha * 0.5})`);
+            gradient.addColorStop(1, `rgba(180, 180, 180, 0)`);
+            
+            ctx.fillStyle = gradient;
             ctx.beginPath();
-            ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+            ctx.arc(this.x, this.y, currentSize, 0, Math.PI * 2);
             ctx.fill();
+            ctx.restore();
         }
     }
 
@@ -237,6 +259,12 @@ document.addEventListener('DOMContentLoaded', () => {
         visible: true
     };
 
+    const lightning = {
+        active: false,
+        alpha: 0,
+        strikeCooldown: Math.random() * 5000 + 3000, // Cooldown inicial
+    };
+
     // --- Funciones de ayuda ---
     const lerp = (a, b, t) => a + (b - a) * t;
 
@@ -287,6 +315,29 @@ document.addEventListener('DOMContentLoaded', () => {
                     star.twinkleSpeed *= -1;
                 }
             });
+
+            // --- Actualizar Relámpagos ---
+            lightning.strikeCooldown -= deltaTime;
+            if (lightning.strikeCooldown <= 0 && !lightning.active) {
+                // Una pequeña probabilidad de que caiga un rayo cada vez que el cooldown termina
+                if (Math.random() < 0.3) { // 30% de probabilidad de rayo
+                    lightning.active = true;
+                    lightning.alpha = 0.9; // Flash brillante
+                }
+                // Reiniciar el cooldown para el próximo intento
+                lightning.strikeCooldown = Math.random() * 8000 + 4000; // Próxima oportunidad en 4-12 segundos
+            }
+
+            if (lightning.active) {
+                lightning.alpha -= deltaTime / 120; // Desvanecimiento rápido
+                if (lightning.alpha <= 0) {
+                    lightning.active = false;
+                    lightning.alpha = 0;
+                }
+            }
+        } else {
+            lightning.active = false;
+            lightning.alpha = 0;
         }
 
         // Actualizar camión (rebote)
@@ -295,10 +346,13 @@ document.addEventListener('DOMContentLoaded', () => {
 
         // Emitir humo
         smokeEmitterCounter += deltaTime;
-        const smokeInterval = Math.max(100, 400 / truckSpeedMultiplier);
+        const smokeInterval = Math.max(80, 300 / truckSpeedMultiplier); // Más humo al acelerar
         if (smokeEmitterCounter > smokeInterval) {
             smokeEmitterCounter = 0;
-            smokeParticles.push(new SmokeParticle(truck.x + 10, truck.y + 10));
+            // El humo sale de la punta del tubo de escape
+            const pipeX = truck.x + 5;
+            const pipeY = truck.y + 15;
+            smokeParticles.push(new SmokeParticle(pipeX - 10, pipeY));
         }
         smokeParticles.forEach((p, i) => {
             p.update(deltaTime);
@@ -435,17 +489,25 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function drawTruck() {
-        // Humo (detrás del camión)
+        // Humo (se dibuja primero para que quede detrás del camión)
         smokeParticles.forEach(p => p.draw(ctx));
 
         // Ruedas
         if (wheelsImg) {
             ctx.drawImage(wheelsImg, truck.x, CANVAS_HEIGHT - 15);
         }
-        // Camión
+        // Carrocería del camión
         if (truckImg) {
             ctx.drawImage(truckImg, truck.x, truck.y);
         }
+
+        // Tubo de escape (dibujado encima del camión)
+        const pipeX = truck.x + 5;
+        const pipeY = truck.y + 15;
+        ctx.fillStyle = '#3d3d3d'; // Metal oscuro
+        ctx.fillRect(pipeX - 8, pipeY - 2, 8, 4); // El tubo horizontal
+        ctx.fillStyle = '#222222'; // La apertura oscura
+        ctx.fillRect(pipeX - 10, pipeY - 3, 2, 6); // La punta del tubo
 
         // Faro (delante del camión)
         if (isNight) {
@@ -526,6 +588,17 @@ document.addEventListener('DOMContentLoaded', () => {
         ctx.restore();
     }
 
+    function drawLightning() {
+        if (lightning.active) {
+            ctx.save();
+            // Un flash blanco que cubre toda la pantalla
+            ctx.globalAlpha = lightning.alpha;
+            ctx.fillStyle = '#f8f9fa'; // Un blanco ligeramente azulado para el flash
+            ctx.fillRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
+            ctx.restore();
+        }
+    }
+
     // --- Bucle Principal de Animación ---
 
     function animate(timestamp) {
@@ -551,6 +624,9 @@ document.addEventListener('DOMContentLoaded', () => {
         trees.forEach(t => t.draw(ctx));
         if (rock.visible) drawRock();
         drawTruck();
+
+        // El relámpago se dibuja al final para que ilumine toda la escena
+        drawLightning();
 
         // Solicitar el siguiente frame
         requestAnimationFrame(animate);
