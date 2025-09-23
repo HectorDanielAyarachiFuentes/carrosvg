@@ -3,27 +3,13 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Animación de Camión Veloz</title>
+    <title>Animación de Camión Veloz con Canvas</title>
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
-    <main>
-        <div class="loop-wrapper">
-            <div class="stars"></div>
-            <div class="sun"></div>
-            <div class="cloud"></div>
-            <div class="cloud"></div>
-            <div class="cloud"></div>
-            <div class="ufo"><div class="tractor-beam"></div></div>
-            <div class="mountain"></div>
-            <div class="hill"></div>
-            <div class="tree"></div>
-            <div class="tree"></div>
-            <div class="tree"></div>
-            <div class="rock"></div>
-            <div class="truck"></div>
-            <div class="wheels"></div>
-        </div>
-    </main>
+    <!-- El canvas reemplaza todos los divs de la animación -->
+    <canvas id="animationCanvas"></canvas>
+    <!-- El nuevo script que controlará toda la animación -->
+    <script src="script.js"></script>
 </body>
 </html>
