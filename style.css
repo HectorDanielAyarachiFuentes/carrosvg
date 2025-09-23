@@ -199,24 +199,32 @@ body {
     animation-timing-function: ease-in-out;
     animation-iteration-count: infinite;
     animation-fill-mode: backwards; /* Asegura que los árboles empiecen en su posición correcta de animación */
+    transform-origin: bottom center; /* Ancla los árboles al suelo al escalar */
 }
 
 /* Usamos nth-child para seleccionar cada árbol por su posición entre los hermanos. */
 /* Cada árbol tiene una posición inicial (--start-x), duración y retardo distintos. */
+/* Añadimos variedad con diferentes tamaños (--tree-scale) y filtros de color. */
 .tree:nth-child(9) {
     --start-x: 1350px;
+    --tree-scale: 1.1; /* Un poco más grande */
     animation-duration: 3s;
     animation-delay: 0s;
+    filter: brightness(0.9); /* Un poco más oscuro */
 }
 .tree:nth-child(10) {
     --start-x: 650px;
+    --tree-scale: 0.8; /* Más pequeño */
     animation-duration: 2s;
     animation-delay: 0.150s;
+    filter: hue-rotate(15deg); /* Tono ligeramente verdoso/amarillento */
 }
 .tree:nth-child(11) {
     --start-x: 2750px;
+    --tree-scale: 1; /* Tamaño por defecto */
     animation-duration: 8s;
     animation-delay: 0.050s;
+    /* Sin filtro para mantener el color original */
 }
 .rock {
     margin-top: -17px;
@@ -293,8 +301,8 @@ body {
 }
 
 @keyframes move-tree {
-    from { transform: translateX(var(--start-x)); }
-    to   { transform: translateX(-50px); }
+    from { transform: translateX(var(--start-x)) scale(var(--tree-scale, 1)); }
+    to   { transform: translateX(-50px) scale(var(--tree-scale, 1)); }
 }
 @keyframes truck {
     0% { transform: translateY(0px); }
