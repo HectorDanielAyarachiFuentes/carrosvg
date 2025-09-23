@@ -212,10 +212,11 @@ function draw(ctx, timestamp) { // Recibe timestamp para animaciones consistente
     // --- NUEVO: Dibujar partículas ---
     state.elements.particles.forEach(p => p.draw(ctx));
     
-    // Relámpago (ilumina toda la escena)
-    if (state.isNight) {
-         state.elements.ufo.drawLightning(ctx);
-    }
+    // --- NUEVO: Dibujar Lens Flare ---
+    drawLensFlare(ctx);
+
+    // Relámpago (ilumina toda la escena, se dibuja al final)
+    if (state.isNight) state.elements.ufo.drawLightning(ctx);
 }
 
 // --- Funciones de Dibujo del Entorno ---
@@ -373,6 +374,75 @@ function drawHeatShimmer(ctx, timestamp) {
         0, roadY - shimmerHeight + Math.sin(timestamp / 200) * waveAmplitude, // Posición de destino (dx, dy)
         Config.CANVAS_WIDTH, shimmerHeight // Tamaño de destino (dWidth, dHeight)
     );
+    ctx.restore();
+}
+
+/**
+ * Dibuja un efecto de "lens flare" cuando el sol está en pantalla.
+ * @param {CanvasRenderingContext2D} ctx El contexto del canvas.
+ */
+function drawLensFlare(ctx) {
+    // Solo visible durante el día cuando el sol está en pantalla
+    if (state.cycleProgress >= 0.50) return;
+
+    // 1. Calcular la posición del sol (usando la misma lógica que drawSunMoon)
+    const sunProgress = state.cycleProgress / 0.50;
+    const sunX = lerp(-40, Config.CANVAS_WIDTH + 40, sunProgress);
+    const sunY = 80 + Math.sin(sunProgress * Math.PI) * -50;
+
+    // Si el sol no está en pantalla, no hacer nada
+    if (sunX < 0 || sunX > Config.CANVAS_WIDTH || sunY < 0 || sunY > Config.CANVAS_HEIGHT) {
+        return;
+    }
+
+    // 2. Calcular la intensidad basada en la altura del sol
+    const intensity = Math.sin(sunProgress * Math.PI) * 0.6; // Opacidad máxima de 0.6
+    if (intensity <= 0) return;
+
+    // 3. Calcular la posición de los "fantasmas" del flare en el lado opuesto de la pantalla
+    const centerX = Config.CANVAS_WIDTH / 2;
+    const centerY = Config.CANVAS_HEIGHT / 2;
+    const vecX = sunX - centerX;
+    const vecY = sunY - centerY;
+
+    ctx.save();
+    ctx.globalCompositeOperation = 'screen'; // El modo de fusión "screen" es ideal para efectos de luz
+
+    // 4. Dibujar los elementos del flare
+    const flareColors = [
+        `rgba(255, 100, 100, ${intensity * 0.1})`,
+        `rgba(100, 255, 100, ${intensity * 0.1})`,
+        `rgba(100, 100, 255, ${intensity * 0.15})`,
+        `rgba(255, 200, 100, ${intensity * 0.2})`,
+    ];
+
+    // Dibujar varios "fantasmas" (círculos de colores) a lo largo del vector opuesto
+    for (let i = 0; i < flareColors.length; i++) {
+        const ghostDist = i * 0.4 - 0.5; // Posiciones relativas (-0.5, -0.1, 0.3, 0.7)
+        const ghostX = centerX - vecX * ghostDist;
+        const ghostY = centerY - vecY * ghostDist;
+        const ghostSize = (Math.random() * 40 + 20) * (1 - Math.abs(ghostDist));
+        ctx.fillStyle = flareColors[i];
+        ctx.beginPath();
+        ctx.arc(ghostX, ghostY, ghostSize, 0, Math.PI * 2);
+        ctx.fill();
+    }
+
+    // Dibujar un gran halo sutil alrededor del sol
+    ctx.fillStyle = `rgba(255, 220, 180, ${intensity * 0.1})`;
+    ctx.beginPath();
+    ctx.arc(sunX, sunY, 150, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Dibujar un destello horizontal
+    const streakWidth = 400;
+    const streakGradient = ctx.createLinearGradient(sunX - streakWidth / 2, sunY, sunX + streakWidth / 2, sunY);
+    streakGradient.addColorStop(0, 'rgba(255, 255, 255, 0)');
+    streakGradient.addColorStop(0.5, `rgba(255, 255, 255, ${intensity * 0.3})`);
+    streakGradient.addColorStop(1, 'rgba(255, 255, 255, 0)');
+    ctx.fillStyle = streakGradient;
+    ctx.fillRect(sunX - streakWidth / 2, sunY - 1, streakWidth, 2);
+
     ctx.restore();
 }
 

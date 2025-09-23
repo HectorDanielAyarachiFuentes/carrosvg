@@ -22,6 +22,17 @@ export default class Truck {
         this.skidEmitterCounter = 0;
         this.dustEmitterCounter = 0;
         this.splashEmitterCounter = 0;
+
+        // --- NUEVO: Propiedades para la antena ---
+        this.antenna = {
+            angle: 0,
+            velocity: 0,   // Velocidad angular en rad/s
+            spring: 25,    // Constante del resorte (qué tan rápido reacciona)
+            damping: 8,    // Coeficiente de amortiguación (cómo de rápido para de oscilar)
+            baseX: 65,     // Posición X en el camión
+            baseY: 15,     // Posición Y en el camión
+            length: 35     // Longitud de la antena (más corta y discreta)
+        };
     }
 
     updateSpeed(keys) {
@@ -43,6 +54,9 @@ export default class Truck {
         this.bounceAngle += deltaTime * 0.01 * this.speedMultiplier;
         this.y = this.baseY - Math.sin(this.bounceAngle) * 2;
 
+        // --- NUEVO: Actualizar física de la antena ---
+        this.updateAntenna(deltaTime, windStrength);
+
         // Emisores de partículas
         this.updateEmitters(deltaTime, isNight, keys, addSkidMark);
 
@@ -59,6 +73,40 @@ export default class Truck {
             p.update(deltaTime);
             if (p.life <= 0) this.splashParticles.splice(i, 1);
         });
+    }
+
+    /**
+     * Actualiza la física de la antena basándose en la velocidad y el viento.
+     * @param {number} deltaTime El tiempo transcurrido desde el último frame.
+     * @param {number} windStrength La fuerza actual del viento.
+     */
+    updateAntenna(deltaTime, windStrength) {
+        // Se ha rediseñado la física de la antena para un movimiento mucho más natural y fluido.
+        // Ahora utiliza un sistema de resorte-amortiguador estándar, que es independiente de la tasa de frames.
+        const dt = deltaTime / 1000; // Delta time en segundos
+        let targetAngle = 0;
+
+        // 1. Calcular el ángulo objetivo basado en las fuerzas externas (viento y aceleración/resistencia)
+        // La fuerza del viento la empuja hacia atrás.
+        targetAngle -= (windStrength / 250);
+        // La resistencia del aire (al acelerar) y la inercia (al frenar) la mueven.
+        targetAngle -= (this.speedMultiplier - 1.0) * 0.2;
+
+        // 2. Calcular las fuerzas del sistema resorte-amortiguador
+        // Fuerza del resorte (Hooke's Law): F = -k * x
+        const springForce = this.antenna.spring * (targetAngle - this.antenna.angle);
+        // Fuerza de amortiguación: F = -c * v
+        const dampingForce = -this.antenna.damping * this.antenna.velocity;
+
+        // 3. Calcular la aceleración (asumiendo masa = 1)
+        const acceleration = springForce + dampingForce;
+
+        // 4. Actualizar la velocidad y el ángulo usando integración de Euler
+        this.antenna.velocity += acceleration * dt;
+        this.antenna.angle += this.antenna.velocity * dt;
+
+        // 5. Limitar el ángulo para que no se salga de control
+        this.antenna.angle = Math.max(-Math.PI / 3, Math.min(Math.PI / 3, this.antenna.angle));
     }
 
     updateEmitters(deltaTime, isNight, keys, addSkidMark) {
@@ -132,6 +180,9 @@ export default class Truck {
             ctx.drawImage(truckImg, this.x, this.y);
         }
 
+        // --- NUEVO: Dibujar la antena ---
+        this.drawAntenna(ctx);
+
         // Tubo de escape
         const pipeX = this.x + this.pipeOffsetX;
         const pipeY = this.y + this.pipeOffsetY;
@@ -149,6 +200,35 @@ export default class Truck {
         if (fogIntensity > 0) {
             this.drawFogLights(ctx, fogIntensity);
         }
+    }
+
+    /**
+     * Dibuja la antena del camión.
+     * @param {CanvasRenderingContext2D} ctx El contexto del canvas.
+     */
+    drawAntenna(ctx) {
+        const baseX = this.x + this.antenna.baseX;
+        const baseY = this.y + this.antenna.baseY;
+
+        ctx.save();
+        ctx.translate(baseX, baseY);
+        ctx.rotate(this.antenna.angle);
+
+        // Dibuja el mástil de la antena
+        ctx.strokeStyle = '#555';
+        ctx.lineWidth = 1.5; // Más delgada
+        ctx.beginPath();
+        ctx.moveTo(0, 0);
+        ctx.lineTo(0, -this.antenna.length);
+        ctx.stroke();
+
+        // Dibuja la bola roja en la punta
+        ctx.fillStyle = '#a93226'; // Un rojo un poco más oscuro
+        ctx.beginPath();
+        ctx.arc(0, -this.antenna.length, 2, 0, Math.PI * 2); // Punta más pequeña
+        ctx.fill();
+
+        ctx.restore();
     }
 
     drawHeadlight(ctx) {
