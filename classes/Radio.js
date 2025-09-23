@@ -1,4 +1,5 @@
 import { getAudioContext } from '../js/audio.js';
+import { loadAudio } from '../js/utils.js';
 
 export default class Radio {
     constructor(musicTracks, truck) {
@@ -6,6 +7,7 @@ export default class Radio {
         this.truck = truck; // Referencia al camión para obtener su posición
 
         this.isRadioOn = false;
+        this.isLoading = false;
         this.radioAudioSource = null;
         this.visualizerAngle = 0;
         this.rKeyPressed = false; // Para manejar una sola pulsación de tecla
@@ -13,45 +15,74 @@ export default class Radio {
         this.currentTrackIndex = 0;
     }
 
-    toggle() {
+    async toggle() {
         const audioCtx = getAudioContext();
         if (!audioCtx || this.musicTracks.length === 0) return;
 
-        const currentTrack = this.musicTracks[this.currentTrackIndex];
-        if (!currentTrack || !currentTrack.buffer) return;
-
+        // --- APAGAR LA RADIO ---
         if (this.isRadioOn) {
             if (this.radioAudioSource) {
                 this.radioAudioSource.stop();
                 this.radioAudioSource = null;
             }
             this.isRadioOn = false;
-        } else {
-            // Reanudar el contexto de audio si está suspendido
-            if (audioCtx.state === 'suspended') {
-                audioCtx.resume();
-            }
-            this.radioAudioSource = audioCtx.createBufferSource();
-            this.radioAudioSource.buffer = currentTrack.buffer;
-            this.radioAudioSource.connect(audioCtx.destination);
-            this.radioAudioSource.loop = true;
-            this.radioAudioSource.start(0);
-            this.isRadioOn = true;
+            return;
         }
+
+        // --- ENCENDER LA RADIO ---
+        if (this.isLoading) return; // Evitar múltiples cargas simultáneas
+
+        this.isLoading = true;
+        
+        const currentTrack = this.musicTracks[this.currentTrackIndex];
+        if (!currentTrack) {
+            this.isLoading = false;
+            return;
+        }
+
+        // Si el buffer de la canción no está cargado, cargarlo ahora.
+        if (!currentTrack.buffer) {
+            currentTrack.buffer = await loadAudio(currentTrack.src, audioCtx);
+        }
+
+        this.isLoading = false;
+
+        // Si la carga falló, o si el usuario apagó la radio mientras cargaba
+        if (!currentTrack.buffer || this.isRadioOn) {
+            if (!currentTrack.buffer) console.error(`No se pudo cargar la canción: ${currentTrack.name}`);
+            return;
+        }
+
+        // Reanudar el contexto de audio si está suspendido (necesario por políticas del navegador)
+        if (audioCtx.state === 'suspended') {
+            audioCtx.resume();
+        }
+        this.radioAudioSource = audioCtx.createBufferSource();
+        this.radioAudioSource.buffer = currentTrack.buffer;
+        this.radioAudioSource.connect(audioCtx.destination);
+        this.radioAudioSource.loop = true;
+        this.radioAudioSource.start(0);
+        this.isRadioOn = true;
     }
 
-    changeTrack() {
+    async changeTrack() {
         if (this.musicTracks.length <= 1) return;
 
         const wasOn = this.isRadioOn;
         if (wasOn) {
-            this.toggle(); // Apaga la música actual
+            // Apaga la música actual de forma síncrona
+            if (this.radioAudioSource) {
+                this.radioAudioSource.stop();
+                this.radioAudioSource = null;
+            }
+            this.isRadioOn = false;
         }
 
         this.currentTrackIndex = (this.currentTrackIndex + 1) % this.musicTracks.length;
 
+        // Si la radio estaba encendida, intenta encenderla con la nueva canción
         if (wasOn) {
-            this.toggle(); // Enciende con la nueva canción
+            await this.toggle(); // toggle se encargará de cargar y reproducir
         }
     }
 

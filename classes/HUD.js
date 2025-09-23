@@ -20,7 +20,10 @@ export default class HUD {
     update() {
         if (!this.nowPlayingElement) return;
 
-        if (this.radio.isRadioOn) {
+        if (this.radio.isLoading) {
+            this.nowPlayingElement.innerHTML = `♪ Cargando...`;
+            this.nowPlayingElement.style.display = 'block';
+        } else if (this.radio.isRadioOn) {
             const trackName = this.radio.getCurrentTrackName();
             this.nowPlayingElement.innerHTML = `♪ ${trackName}`;
             this.nowPlayingElement.style.display = 'block';

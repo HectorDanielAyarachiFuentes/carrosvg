@@ -262,26 +262,23 @@ async function start() {
     try {
         // Cargar todos los assets en paralelo
         // NOTA: Debes reemplazar los archivos placeholder con tus propios MP3
-        const [truckImg, wheelsImg, treeImg, cowImg, pilotImg, mooSound, radioMusic1, radioMusic2, radioMusic3] = await Promise.all([
+        const [truckImg, wheelsImg, treeImg, cowImg, pilotImg, mooSound] = await Promise.all([
             loadImage('svg/truck.svg'),
             loadImage('svg/wheels.svg'),
             loadImage('svg/tree.svg'),
             loadImage('svg/cow.svg'),
             loadImage('img/dulcepiloto.png'),
             loadAudio('sonidos/moo.mp3', getAudioContext()),
-            loadAudio('sonidos/Un Montón de Estrellas - Santiago Cañete.mp3', getAudioContext()), // Asegúrate de que este archivo exista en la carpeta 'sonidos/'
-            loadAudio('sonidos/Rakim-Ken-Y-Quedate-Junto-A-Mi.mp3', getAudioContext()), // Placeholder
-            loadAudio('sonidos/Ken-Y-Ese-no-soy-yo-Video-Oficial-Kenny.mp3', getAudioContext())  // Placeholder
         ]);
 
         state.assets = { truck: truckImg, wheels: wheelsImg, tree: treeImg, cow: cowImg, pilot: pilotImg, mooSound: mooSound };
         state.assets.billboard = pilotImg; // Reutiliza la imagen del piloto para el cartel
-        // Agrupar canciones para la radio
+        // Definir las canciones para la radio, pero sin cargarlas aún para no bloquear el inicio
         const musicTracks = [
-            { buffer: radioMusic1, name: 'Un Montón de Estrellas' },
-            { buffer: radioMusic2, name: 'Carretera Infinita' },
-            { buffer: radioMusic3, name: 'Ritmo Nocturno' }
-        ].filter(track => track.buffer); // Filtrar canciones que no se cargaron
+            { src: 'sonidos/Un Montón de Estrellas - Santiago Cañete.mp3', name: 'Un Montón de Estrellas', buffer: null },
+            { src: 'sonidos/Rakim-Ken-Y-Quedate-Junto-A-Mi.mp3', name: 'Carretera Infinita', buffer: null },
+            { src: 'sonidos/Ken-Y-Ese-no-soy-yo-Video-Oficial-Kenny.mp3', name: 'Ritmo Nocturno', buffer: null }
+        ];
 
         // Inicializar todos los objetos de la animación
         state.elements.truck = new Truck();
