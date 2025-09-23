@@ -75,24 +75,33 @@ canvas {
     100%{background-position:0% 50%}
 }
 
-#hud-panel::before, 
-#hud-panel::after {
+#hud-panel::before,
+#hud-panel::after,
+#mobile-controls::before,
+#mobile-controls::after {
     content: '';
     position: absolute;
     top: 0; left: 0; right: 0; bottom: 0;
-    border-radius: 12px; /* Coincide con el panel padre */
     z-index: -1; /* Detrás del texto y los controles */
 }
 
+/* El HUD de escritorio tiene bordes redondeados */
+#hud-panel::before,
+#hud-panel::after {
+    border-radius: 12px;
+}
+
 /* ::before es el fondo de día/noche */
-#hud-panel::before {
+#hud-panel::before,
+#mobile-controls::before {
     background-color: rgba(40, 50, 70, 0.5); /* Color de día */
     transition: background-color 0.5s ease, opacity 0.7s ease;
     opacity: 1;
 }
 
 /* ::after es el fondo de arcoiris */
-#hud-panel::after {
+#hud-panel::after,
+#mobile-controls::after {
     background: linear-gradient(270deg, 
         rgba(255, 121, 121, 0.8), rgba(255, 190, 118, 0.8), 
         rgba(246, 229, 141, 0.8), rgba(186, 220, 88, 0.8), 
@@ -105,7 +114,8 @@ canvas {
     transition: opacity 0.7s ease;
 }
 
-#hud-panel.night-mode::before {
+#hud-panel.night-mode::before,
+#mobile-controls.night-mode::before {
     background-color: rgba(10, 10, 20, 0.5); /* Color de noche */
 }
 
@@ -126,10 +136,12 @@ canvas {
 /* --- Estados del HUD --- */
 
 /* Cuando la radio está encendida, mostramos el arcoiris y ocultamos el fondo normal */
-#hud-panel.radio-on::before {
+#hud-panel.radio-on::before,
+#mobile-controls.radio-on::before {
     opacity: 0;
 }
-#hud-panel.radio-on::after {
+#hud-panel.radio-on::after,
+#mobile-controls.radio-on::after {
     opacity: 1;
 }
 
@@ -151,11 +163,16 @@ canvas {
 /* --- Controles Móviles --- */
 #mobile-controls {
     display: none; /* Oculto por defecto en escritorio */
+    position: relative; /* Para los fondos con pseudo-elementos */
+    overflow: hidden; /* Para que los fondos no se salgan */
     flex-shrink: 0; /* No se encoge */
     justify-content: space-between;
     padding: 10px 20px;
     box-sizing: border-box;
-    background-color: rgba(0, 0, 0, 0.2);
+    background-color: transparent; /* El fondo ahora lo gestionan los pseudo-elementos */
+    /* Efecto de cristal esmerilado, igual que el HUD de escritorio */
+    -webkit-backdrop-filter: blur(10px);
+    backdrop-filter: blur(10px);
     -webkit-user-select: none; /* Evita la selección de texto al tocar */
     -ms-user-select: none;
     user-select: none;

@@ -6,6 +6,7 @@ export default class HUD {
         this.hudPanelElement = document.getElementById('hud-panel');
         this.controlsElement = document.getElementById('hud-controls');
         this.nowPlayingElement = document.getElementById('hud-now-playing');
+        this.mobileControlsElement = document.getElementById('mobile-controls');
 
         // Poblar el panel de controles estático una sola vez
         if (this.controlsElement) {
@@ -19,23 +20,30 @@ export default class HUD {
 
     // Este método se llamará en cada frame para actualizar partes dinámicas del HUD
     update(isNight) {
-        if (!this.nowPlayingElement || !this.hudPanelElement) return;
+        // Aplicar clases de tema al HUD de escritorio
+        if (this.hudPanelElement) {
+            this.hudPanelElement.classList.toggle('night-mode', isNight);
+            this.hudPanelElement.classList.toggle('radio-on', this.radio.isRadioOn);
+        }
 
-        // Cambiar el tema del HUD según la hora del día
-        this.hudPanelElement.classList.toggle('night-mode', isNight);
+        // Aplicar clases de tema al HUD móvil
+        if (this.mobileControlsElement) {
+            this.mobileControlsElement.classList.toggle('night-mode', isNight);
+            this.mobileControlsElement.classList.toggle('radio-on', this.radio.isRadioOn);
+        }
 
-        // Añadir clase para el efecto arcoiris si la radio está encendida
-        this.hudPanelElement.classList.toggle('radio-on', this.radio.isRadioOn);
-
-        if (this.radio.isLoading) {
-            this.nowPlayingElement.innerHTML = `♪ Cargando...`;
-            this.nowPlayingElement.classList.add('visible');
-        } else if (this.radio.isRadioOn) {
-            const trackName = this.radio.getCurrentTrackName();
-            this.nowPlayingElement.innerHTML = `♪ ${trackName}`;
-            this.nowPlayingElement.classList.add('visible');
-        } else {
-            this.nowPlayingElement.classList.remove('visible');
+        // Actualizar el texto "Now Playing" en el HUD de escritorio
+        if (this.nowPlayingElement) {
+            if (this.radio.isLoading) {
+                this.nowPlayingElement.innerHTML = `♪ Cargando...`;
+                this.nowPlayingElement.classList.add('visible');
+            } else if (this.radio.isRadioOn) {
+                const trackName = this.radio.getCurrentTrackName();
+                this.nowPlayingElement.innerHTML = `♪ ${trackName}`;
+                this.nowPlayingElement.classList.add('visible');
+            } else {
+                this.nowPlayingElement.classList.remove('visible');
+            }
         }
     }
 }
