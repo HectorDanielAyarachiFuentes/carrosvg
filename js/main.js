@@ -12,6 +12,7 @@ import Truck from '../classes/Truck.js';
 import UFO from '../classes/UFO.js';
 import RainDrop from '../classes/RainDrop.js';
 import Radio from '../classes/Radio.js';
+import Biplane from '../classes/Biplane.js';
 import HUD from '../classes/HUD.js';
 
 // --- Estado Global de la Animación ---
@@ -32,6 +33,7 @@ const state = {
         truck: null,
         ufo: null,
         radio: null,
+        biplane: null,
         hud: null,
     }
 };
@@ -77,6 +79,7 @@ function update(deltaTime) {
     state.elements.truck.update(deltaTime, state.isNight);
     state.elements.ufo.update(deltaTime, state.cycleProgress, state.elements.trees, state.elements.cows, state.assets.mooSound);
     state.elements.radio.update(deltaTime, keys); // Actualiza el estado de la radio
+    state.elements.biplane.update(deltaTime, state.isNight);
     state.elements.hud.update(); // Actualiza el DOM del HUD basado en el estado de la radio
     
     // Reiniciar vacas para el siguiente ciclo
@@ -105,6 +108,7 @@ function draw(ctx) {
     state.elements.mountains.forEach(m => m.draw(ctx));
     state.elements.hills.forEach(h => h.draw(ctx));
     state.elements.clouds.forEach(c => c.draw(ctx));
+    state.elements.biplane.draw(ctx);
     state.elements.ufo.draw(ctx);
     
     state.elements.trees.forEach(t => t.draw(ctx, state.assets.tree));
@@ -228,18 +232,19 @@ async function start() {
     try {
         // Cargar todos los assets en paralelo
         // NOTA: Debes reemplazar los archivos placeholder con tus propios MP3
-        const [truckImg, wheelsImg, treeImg, cowImg, mooSound, radioMusic1, radioMusic2, radioMusic3] = await Promise.all([
+        const [truckImg, wheelsImg, treeImg, cowImg, pilotImg, mooSound, radioMusic1, radioMusic2, radioMusic3] = await Promise.all([
             loadImage('svg/truck.svg'),
             loadImage('svg/wheels.svg'),
             loadImage('svg/tree.svg'),
             loadImage('svg/cow.svg'),
+            loadImage('img/dulcepiloto.png'),
             loadAudio('sonidos/moo.mp3', getAudioContext()),
             loadAudio('sonidos/Un Montón de Estrellas - Santiago Cañete.mp3', getAudioContext()),
             loadAudio('sonidos/Cancion_2_Placeholder.mp3', getAudioContext()), // Placeholder
             loadAudio('sonidos/Cancion_3_Placeholder.mp3', getAudioContext())  // Placeholder
         ]);
 
-        state.assets = { truck: truckImg, wheels: wheelsImg, tree: treeImg, cow: cowImg, mooSound: mooSound };
+        state.assets = { truck: truckImg, wheels: wheelsImg, tree: treeImg, cow: cowImg, pilot: pilotImg, mooSound: mooSound };
 
         // Agrupar canciones para la radio
         const musicTracks = [
@@ -251,6 +256,7 @@ async function start() {
         // Inicializar todos los objetos de la animación
         state.elements.truck = new Truck();
         state.elements.ufo = new UFO();
+        state.elements.biplane = new Biplane(state.assets.pilot);
         
         state.elements.mountains = [
             new SceneryObject(100, Config.CANVAS_HEIGHT + 100, 120, 1),
