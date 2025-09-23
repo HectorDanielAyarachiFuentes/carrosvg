@@ -24,7 +24,7 @@ export default class Billboard {
         }
 
         // 2. Elige un nuevo tamaño aleatorio para más variedad
-        this.scale = Math.random() * 0.1 + 0.15; // Rango de 0.15 a 0.55 para que se vean más pequeños
+        this.scale = Math.random() * 0.05 + 0.10; // Rango de 0.10 a 0.15 para que sean aún más pequeños
         this.speed = this.baseSpeed * this.scale; // Parallax: más grandes (cercanos) se mueven más rápido
         this.width = (this.billboardImg ? this.billboardImg.width : 100) * this.scale;
         this.height = (this.billboardImg ? this.billboardImg.height : 50) * this.scale;
