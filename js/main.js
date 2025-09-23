@@ -1,5 +1,5 @@
 import * as Config from './config.js';
-import { loadImage, loadAudio, lerp } from './utils.js';
+import { loadImage, loadAudio, lerp, lerpColor } from './utils.js';
 import { setupInputHandlers, keys } from './input.js';
 import { getAudioContext, resumeAudio } from './audio.js';
 
@@ -65,7 +65,7 @@ function update(deltaTime) {
 
     // Progreso del ciclo día-noche
     state.cycleProgress = (state.lastTime % Config.CYCLE_DURATION) / Config.CYCLE_DURATION;
-    state.isNight = state.cycleProgress > 0.55 && state.cycleProgress < 0.95;
+    state.isNight = state.cycleProgress >= 0.60 && state.cycleProgress < 0.90;
 
     // Actualizar elementos del escenario
     state.elements.mountains.forEach(m => m.update(deltaTime, state.truckSpeedMultiplier));
@@ -128,60 +128,82 @@ function draw(ctx) {
 
 // --- Funciones de Dibujo del Entorno ---
 function drawSky(ctx) {
-    let skyColor = Config.DAY_SKY;
-    if (state.cycleProgress > 0.45 && state.cycleProgress < 0.55) {
-        const t = (state.cycleProgress - 0.45) / 0.10;
-        ctx.fillStyle = Config.DAY_SKY;
-        ctx.fillRect(0, 0, Config.CANVAS_WIDTH, Config.CANVAS_HEIGHT);
-        ctx.fillStyle = Config.SUNSET_SKY;
-        ctx.globalAlpha = t;
-        ctx.fillRect(0, 0, Config.CANVAS_WIDTH, Config.CANVAS_HEIGHT);
-        ctx.globalAlpha = 1;
-        return;
-    } else if (state.isNight) {
-        skyColor = Config.NIGHT_SKY;
-    } else if (state.cycleProgress >= 0.95) {
-        const t = (state.cycleProgress - 0.95) / 0.05;
-        ctx.fillStyle = Config.NIGHT_SKY;
-        ctx.fillRect(0, 0, Config.CANVAS_WIDTH, Config.CANVAS_HEIGHT);
-        ctx.fillStyle = Config.DAY_SKY;
-        ctx.globalAlpha = t;
-        ctx.fillRect(0, 0, Config.CANVAS_WIDTH, Config.CANVAS_HEIGHT);
-        ctx.globalAlpha = 1;
-        return;
+    const progress = state.cycleProgress;
+    let skyColor;
+
+    // Atardecer (Día -> Atardecer) 0.40 -> 0.50
+    if (progress > 0.40 && progress < 0.50) {
+        const t = (progress - 0.40) / 0.10;
+        skyColor = lerpColor(Config.DAY_SKY, Config.SUNSET_SKY, t);
+    } 
+    // Anochecer (Atardecer -> Noche) 0.50 -> 0.60
+    else if (progress >= 0.50 && progress < 0.60) {
+        const t = (progress - 0.50) / 0.10;
+        skyColor = lerpColor(Config.SUNSET_SKY, Config.NIGHT_SKY, t);
     }
+    // Noche 0.60 -> 0.90
+    else if (state.isNight) {
+        skyColor = Config.NIGHT_SKY;
+    }
+    // Amanecer (Noche -> Día) 0.90 -> 1.0
+    else if (progress >= 0.90) {
+        const t = (progress - 0.90) / 0.10;
+        skyColor = lerpColor(Config.NIGHT_SKY, Config.DAY_SKY, t);
+    }
+    // Día
+    else {
+        skyColor = Config.DAY_SKY;
+    }
+
     ctx.fillStyle = skyColor;
     ctx.fillRect(0, 0, Config.CANVAS_WIDTH, Config.CANVAS_HEIGHT);
 }
 
 function drawSunMoon(ctx) {
     ctx.save();
-    if (state.cycleProgress < 0.5) {
-        const sunProgress = state.cycleProgress / 0.5;
+    // Sol: visible durante el día y el atardecer
+    if (state.cycleProgress < 0.50) { // El sol se pone durante el anochecer
+        const sunProgress = state.cycleProgress / 0.50;
         const x = lerp(-40, Config.CANVAS_WIDTH + 40, sunProgress);
+        const y = 80 + Math.sin(sunProgress * Math.PI) * -50; // Arco suave
         ctx.fillStyle = Config.SUN_COLOR;
         ctx.shadowColor = Config.SUN_COLOR;
         ctx.shadowBlur = 20;
         ctx.beginPath();
-        ctx.arc(x, 40, 20, 0, Math.PI * 2);
+        ctx.arc(x, y, 20, 0, Math.PI * 2);
         ctx.fill();
-    } else if (state.cycleProgress > 0.55) {
-        const moonProgress = (state.cycleProgress - 0.55) / 0.45;
+    } 
+    // Luna: visible durante la noche
+    else if (state.cycleProgress > 0.60) { // La luna sale al empezar la noche
+        const moonProgress = (state.cycleProgress - 0.60) / (1.0 - 0.60);
         const x = lerp(Config.CANVAS_WIDTH + 40, -40, moonProgress);
+        const y = 80 + Math.sin(moonProgress * Math.PI) * -50; // Arco suave
+        
         ctx.fillStyle = Config.MOON_COLOR;
+        ctx.shadowColor = Config.MOON_COLOR;
+        ctx.shadowBlur = 10;
         ctx.beginPath();
-        ctx.arc(x, 40, 20, 0, Math.PI * 2);
+        ctx.arc(x, y, 20, 0, Math.PI * 2);
         ctx.fill();
+        ctx.shadowBlur = 0;
+
+        // Cráteres para dar textura
         ctx.fillStyle = Config.MOON_CRATER_COLOR;
         ctx.beginPath();
-        ctx.arc(x - 8, 40 - 8, 20, 0, Math.PI * 2);
+        ctx.arc(x + 5, y - 10, 4, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.beginPath();
+        ctx.arc(x - 10, y - 2, 6, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.beginPath();
+        ctx.arc(x + 8, y + 8, 3, 0, Math.PI * 2);
         ctx.fill();
     }
     ctx.restore();
 }
 
 function drawStars(ctx) {
-    const nightProgress = (state.cycleProgress - 0.55) / (0.95 - 0.55);
+    const nightProgress = (state.cycleProgress - 0.60) / (0.90 - 0.60);
     const maxAlpha = Math.sin(nightProgress * Math.PI);
 
     ctx.fillStyle = '#FFFFFF';

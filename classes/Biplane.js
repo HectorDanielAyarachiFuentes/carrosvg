@@ -24,24 +24,25 @@ export default class Biplane {
     }
 
     update(deltaTime, isNight) {
-        this.visible = !isNight;
+        // El avión solo debe empezar un nuevo vuelo si es de día.
+        const isWaitingOffscreen = this.x <= -300 - (this.bannerWidth * this.scale);
+        if (isNight && isWaitingOffscreen) {
+            this.visible = false;
+            return; // No hacer nada si es de noche y está esperando fuera de pantalla.
+        }
 
-        if (this.visible) {
-            this.x += this.speed * (deltaTime / 1000);
-            this.propellerAngle += deltaTime * 0.05;
-            this.bobbingAngle += deltaTime * 0.005;
-            this.bannerWaveAngle += deltaTime * 0.01; // Actualizar la ondulación del cartel
+        // Si llega aquí, el avión o está volando o es de día y puede empezar.
+        this.visible = true;
+        this.x += this.speed * (deltaTime / 1000);
+        this.propellerAngle += deltaTime * 0.05;
+        this.bobbingAngle += deltaTime * 0.005;
+        this.bannerWaveAngle += deltaTime * 0.01;
 
-            // Si el avión sale completamente de la pantalla, lo reiniciamos
-            if (this.x > Config.CANVAS_WIDTH + 200) {
-                this.x = -300 - (this.bannerWidth * this.scale); // Asegurarse que el cartel también empiece fuera
-                this.y = 100 + Math.random() * 50;
-            }
-        } else {
-            // Si es de noche y el avión aún está visible, lo movemos fuera de la pantalla
-            if (this.x > -300) {
-                this.x = -300;
-            }
+        // Si el avión sale completamente de la pantalla por la derecha, se reinicia su posición.
+        // La lógica del principio evitará que se mueva si se reinicia durante la noche.
+        if (this.x > Config.CANVAS_WIDTH + 200) {
+            this.x = -300 - (this.bannerWidth * this.scale);
+            this.y = 100 + Math.random() * 50;
         }
     }
 
