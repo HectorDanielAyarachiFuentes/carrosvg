@@ -13,6 +13,7 @@ export default class Radio {
         this.rKeyPressed = false; // Para manejar una sola pulsación de tecla
         this.mKeyPressed = false; // Para cambiar de canción
         this.currentTrackIndex = 0;
+        this.songJustChanged = false; // Flag for particle effect
     }
 
     async toggle() {
@@ -67,6 +68,8 @@ export default class Radio {
 
     async changeTrack() {
         if (this.musicTracks.length <= 1) return;
+
+        this.songJustChanged = true; // Set flag for particle effect
 
         const wasOn = this.isRadioOn;
         if (wasOn) {

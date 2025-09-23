@@ -15,6 +15,7 @@ import Radio from '../classes/Radio.js';
 import Billboard from '../classes/Billboard.js'; // Importa la nueva clase Billboard
 import Biplane from '../classes/Biplane.js';
 import HUD from '../classes/HUD.js';
+import Particle from '../classes/Particle.js';
 
 // --- Estado Global de la Animación ---
 const state = {
@@ -33,6 +34,7 @@ const state = {
         billboards: [], // Añade un array para los carteles publicitarios
         raindrops: [],
         stars: [],
+        particles: [],
         truck: null,
         ufo: null,
         radio: null,
@@ -87,8 +89,23 @@ function update(deltaTime) {
     state.elements.ufo.update(deltaTime, state.cycleProgress, state.elements.trees, state.elements.cows, state.assets.mooSound);
     state.elements.radio.update(deltaTime, keys); // Actualiza el estado de la radio
     state.elements.biplane.update(deltaTime, state.isNight);
-    state.elements.hud.update(state.isNight, deltaTime); // Actualiza el DOM del HUD basado en el estado de la radio y el ciclo día/noche
+    state.elements.hud.update(state.isNight, deltaTime); // Actualiza el DOM del HUD
     
+    // --- NUEVO: Partículas de cambio de canción ---
+    if (state.elements.radio.songJustChanged) {
+        const radioVizX = state.elements.truck.x + 75;
+        const radioVizY = state.elements.truck.y - 15;
+        createParticleBurst(radioVizX, radioVizY, 40); // Create 40 particles
+        state.elements.radio.songJustChanged = false; // Reset flag
+    }
+
+    // Actualizar partículas
+    state.elements.particles.forEach((p, index) => {
+        p.update();
+        if (p.life <= 0) {
+            state.elements.particles.splice(index, 1);
+        }
+    });
     // Reiniciar vacas para el siguiente ciclo
     if (state.cycleProgress > 0.95) {
         state.elements.cows.forEach(cow => {
@@ -127,6 +144,9 @@ function draw(ctx) {
 
     // Efectos (se dibujan encima de sus objetivos)
     state.elements.ufo.drawBeams(ctx, state.assets.cow);
+
+    // --- NUEVO: Dibujar partículas ---
+    state.elements.particles.forEach(p => p.draw(ctx));
     
     // Relámpago (ilumina toda la escena)
     if (state.isNight) {
@@ -226,6 +246,13 @@ function drawStars(ctx) {
     });
     ctx.globalAlpha = 1;
 }
+
+function createParticleBurst(x, y, count) {
+    for (let i = 0; i < count; i++) {
+        state.elements.particles.push(new Particle(x, y));
+    }
+}
+
 
 function setupMobileControls() {
     const btnLeft = document.getElementById('btn-left');

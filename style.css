@@ -168,6 +168,22 @@ canvas {
     opacity: 1;
 }
 
+/* --- NUEVO: Texto arcoiris para la canción --- */
+#hud-panel.radio-on #hud-now-playing {
+    background: linear-gradient(270deg, 
+        rgb(255, 121, 121), rgb(255, 190, 118), 
+        rgb(246, 229, 141), rgb(186, 220, 88), 
+        rgb(126, 214, 223), rgb(224, 86, 253),
+        rgb(255, 121, 121)
+    );
+    background-size: 600% 600%;
+    animation: rainbow-bg 18s ease infinite;
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+}
+
+
 #hud-day-night-icon span.visible {
     opacity: 1;
     transform: scale(1) rotate(0deg);
@@ -176,7 +192,6 @@ canvas {
 #hud-now-playing {
     font-weight: bold;
     /* Estilos para la transición de aparición/desaparición */
-    opacity: 0;
     visibility: hidden;
     transition: opacity 0.3s ease; /* Solo transición de opacidad */
     position: relative; /* Para el pseudo-elemento del cursor */
@@ -191,6 +206,12 @@ canvas {
 #hud-now-playing.typing::after {
     content: '▋'; /* Usar un bloque más estético */
     animation: blink 1s step-end infinite;
+    /* --- MEJORA: Asegurar que el cursor sea visible con el texto arcoiris --- */
+    color: #f0f0f0; 
+    /* Evita que el gradiente se aplique al cursor */
+    background: none;
+    -webkit-background-clip: initial;
+    background-clip: initial;
 }
 
 @keyframes blink {
