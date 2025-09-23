@@ -35,6 +35,13 @@ document.addEventListener('DOMContentLoaded', () => {
     let lastTime = 0;
     let cycleProgress = 0; // 0 a 1
     let isNight = false;
+    let truckSpeedMultiplier = 1.0;
+
+    // --- Estado del Teclado ---
+    const keys = {
+        ArrowRight: false,
+        ArrowLeft: false,
+    };
 
     // --- Clases y Objetos de la Animación ---
 
@@ -48,7 +55,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         update(deltaTime) {
-            this.x -= this.speed * (deltaTime / 16.67);
+            this.x -= this.speed * truckSpeedMultiplier * (deltaTime / 16.67);
             if (this.x < -this.radius * 2) {
                 this.x = CANVAS_WIDTH + this.radius * 2;
             }
@@ -108,7 +115,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         update(deltaTime) {
-            this.x -= this.speed * (deltaTime / 1000);
+            this.x -= this.speed * truckSpeedMultiplier * (deltaTime / 1000);
             if (this.x < -100) {
                 this.reset();
             }
@@ -149,6 +156,35 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
+    // Gotas de lluvia
+    class RainDrop {
+        constructor() {
+            this.reset();
+            this.len = Math.random() * 15 + 5;
+            this.speed = Math.random() * 5 + 2; // Velocidad de caída
+        }
+
+        reset() {
+            this.x = Math.random() * CANVAS_WIDTH;
+            this.y = -Math.random() * CANVAS_HEIGHT;
+        }
+
+        update(deltaTime) {
+            this.y += this.speed * (deltaTime / 16.67); // Movimiento independiente del framerate
+            if (this.y > CANVAS_HEIGHT) {
+                this.reset();
+                this.y = -this.len;
+            }
+        }
+
+        draw(ctx) {
+            ctx.beginPath();
+            ctx.moveTo(this.x, this.y);
+            ctx.lineTo(this.x, this.y + this.len);
+            ctx.stroke();
+        }
+    }
+
     // --- Inicialización de objetos ---
     const mountains = [
         new SceneryObject(100, CANVAS_HEIGHT + 100, 120, 1),
@@ -164,6 +200,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const clouds = [new Cloud(), new Cloud(), new Cloud()];
     const trees = [new Tree(), new Tree(), new Tree()];
+    const raindrops = Array.from({ length: 200 }, () => new RainDrop());
     const stars = Array.from({ length: 100 }, () => ({
         x: Math.random() * CANVAS_WIDTH,
         y: Math.random() * CANVAS_HEIGHT * 0.8,
@@ -206,6 +243,26 @@ document.addEventListener('DOMContentLoaded', () => {
     // --- Funciones de Actualización (Update) ---
 
     function update(deltaTime) {
+        // --- Control de velocidad del camión ---
+        const ACCELERATION = 0.03;
+        const DECELERATION = 0.05;
+        const MAX_SPEED = 2.5;
+        const MIN_SPEED = 0.2;
+        const NATURAL_DECELERATION = 0.01;
+
+        if (keys.ArrowRight) {
+            truckSpeedMultiplier = Math.min(MAX_SPEED, truckSpeedMultiplier + ACCELERATION);
+        } else if (keys.ArrowLeft) {
+            truckSpeedMultiplier = Math.max(MIN_SPEED, truckSpeedMultiplier - DECELERATION);
+        } else {
+            // Regresar gradualmente a la velocidad normal
+            if (truckSpeedMultiplier > 1.0) {
+                truckSpeedMultiplier = Math.max(1.0, truckSpeedMultiplier - NATURAL_DECELERATION);
+            } else if (truckSpeedMultiplier < 1.0) {
+                truckSpeedMultiplier = Math.min(1.0, truckSpeedMultiplier + NATURAL_DECELERATION);
+            }
+        }
+
         // Progreso del ciclo día-noche
         cycleProgress = (lastTime % CYCLE_DURATION) / CYCLE_DURATION;
         isNight = cycleProgress > 0.55 && cycleProgress < 0.95;
@@ -217,7 +274,9 @@ document.addEventListener('DOMContentLoaded', () => {
         trees.forEach(t => t.update(deltaTime));
 
         // Actualizar estrellas (parpadeo)
+        // y lluvia
         if (isNight) {
+            raindrops.forEach(r => r.update(deltaTime));
             stars.forEach(star => {
                 star.alpha += star.twinkleSpeed;
                 if (star.alpha > 1) {
@@ -231,12 +290,13 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         // Actualizar camión (rebote)
-        truck.bounceAngle += deltaTime * 0.01;
+        truck.bounceAngle += deltaTime * 0.01 * truckSpeedMultiplier;
         truck.y = truck.baseY - Math.sin(truck.bounceAngle) * 2;
 
         // Emitir humo
         smokeEmitterCounter += deltaTime;
-        if (smokeEmitterCounter > 400) {
+        const smokeInterval = Math.max(100, 400 / truckSpeedMultiplier);
+        if (smokeEmitterCounter > smokeInterval) {
             smokeEmitterCounter = 0;
             smokeParticles.push(new SmokeParticle(truck.x + 10, truck.y + 10));
         }
@@ -364,6 +424,16 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
+    function drawRain() {
+        if (isNight) {
+            ctx.save();
+            ctx.strokeStyle = 'rgba(255, 255, 255, 0.3)';
+            ctx.lineWidth = 1;
+            raindrops.forEach(r => r.draw(ctx));
+            ctx.restore();
+        }
+    }
+
     function drawTruck() {
         // Humo (detrás del camión)
         smokeParticles.forEach(p => p.draw(ctx));
@@ -473,6 +543,7 @@ document.addEventListener('DOMContentLoaded', () => {
         drawSky();
         drawSunMoon();
         drawStars();
+        drawRain();
         mountains.forEach(m => m.draw(ctx));
         hills.forEach(h => h.draw(ctx));
         clouds.forEach(c => c.draw(ctx));
@@ -484,6 +555,18 @@ document.addEventListener('DOMContentLoaded', () => {
         // Solicitar el siguiente frame
         requestAnimationFrame(animate);
     }
+
+    // --- Control por Teclado ---
+    window.addEventListener('keydown', (e) => {
+        if (keys.hasOwnProperty(e.key)) {
+            keys[e.key] = true;
+        }
+    });
+    window.addEventListener('keyup', (e) => {
+        if (keys.hasOwnProperty(e.key)) {
+            keys[e.key] = false;
+        }
+    });
 
     // --- Iniciar la animación ---
     async function start() {
