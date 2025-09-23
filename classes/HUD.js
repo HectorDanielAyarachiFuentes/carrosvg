@@ -9,9 +9,9 @@ export default class HUD {
         // Poblar el panel de controles estático una sola vez
         if (this.controlsElement) {
             this.controlsElement.innerHTML = `
-                <p>← → : Acelerar/Frenar</p>
-                <p>  R : Radio On/Off</p>
-                <p>  M : Cambiar Canción</p>
+                <span><strong>← →</strong> Acelerar/Frenar</span>
+                <span><strong>R</strong> Radio On/Off</span>
+                <span><strong>M</strong> Cambiar Canción</span>
             `;
         }
     }
