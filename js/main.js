@@ -89,7 +89,7 @@ function update(deltaTime) {
     state.elements.ufo.update(deltaTime, state.cycleProgress, state.elements.trees, state.elements.cows, state.assets.mooSound);
     state.elements.radio.update(deltaTime, keys); // Actualiza el estado de la radio
     state.elements.biplane.update(deltaTime, state.isNight);
-    state.elements.hud.update(state.isNight, deltaTime, state.cycleProgress); // Actualiza el DOM del HUD
+    state.elements.hud.update(state.isNight, deltaTime, state.cycleProgress, state.truckSpeedMultiplier); // Actualiza el DOM del HUD
     
     // --- NUEVO: Partículas de cambio de canción ---
     if (state.elements.radio.songJustChanged) {

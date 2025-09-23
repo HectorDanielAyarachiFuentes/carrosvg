@@ -8,6 +8,7 @@ export default class HUD {
         this.nowPlayingElement = document.getElementById('hud-now-playing');
         this.mobileControlsElement = document.getElementById('mobile-controls');
         this.timeDisplayElement = document.getElementById('hud-time-display');
+        this.speedDisplayElement = document.getElementById('hud-speed-display');
 
         // --- Typewriter state ---
         this.typewriterTargetText = '';
@@ -38,7 +39,7 @@ export default class HUD {
     }
 
     // Este método se llamará en cada frame para actualizar partes dinámicas del HUD
-    update(isNight, deltaTime, cycleProgress) {
+    update(isNight, deltaTime, cycleProgress, truckSpeed) {
         // Aplicar clases de tema al HUD de escritorio
         if (this.hudPanelElement) {
             this.hudPanelElement.classList.toggle('night-mode', isNight);
@@ -71,6 +72,19 @@ export default class HUD {
             const formattedMinutes = String(minutes).padStart(2, '0');
 
             this.timeDisplayElement.textContent = `${formattedHours}:${formattedMinutes}`;
+        }
+
+        // Actualizar el indicador de velocidad
+        if (this.speedDisplayElement && truckSpeed !== undefined) {
+            // Mapear el speedMultiplier (0.2 a 2.5) a un rango de 0 a 180 km/h
+            const minSpeed = 0.2;
+            const maxSpeed = 2.5;
+            const displaySpeed = Math.round(((truckSpeed - minSpeed) / (maxSpeed - minSpeed)) * 180);
+            this.speedDisplayElement.innerHTML = `${Math.max(0, displaySpeed)} <span>km/h</span>`;
+
+            // --- NUEVO: Efecto de parpadeo a máxima velocidad ---
+            const atMaxSpeed = truckSpeed >= maxSpeed;
+            this.speedDisplayElement.classList.toggle('max-speed', atMaxSpeed);
         }
 
         // --- Rhythm and Glitch Effects ---

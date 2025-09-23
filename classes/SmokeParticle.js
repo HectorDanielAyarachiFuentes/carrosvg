@@ -9,6 +9,9 @@ export default class SmokeParticle {
         this.vy = -(Math.random() * 30 + 20);
         this.initialLife = Math.random() * 1.5 + 1.0;
         this.life = this.initialLife;
+        // --- NUEVO: Propiedades para la distorsión por calor ---
+        this.heatWobbleAngle = Math.random() * Math.PI * 2;
+        this.heatWobbleSpeed = Math.random() * 4 + 4; // Velocidad del "wobble"
     }
 
     update(deltaTime, windStrength) {
@@ -17,6 +20,8 @@ export default class SmokeParticle {
         this.x += this.vx * dt;
         this.y += this.vy * dt;
         this.vx -= windStrength * dt; // El viento empuja el humo hacia la izquierda
+        // --- NUEVO: Actualizar ángulo de distorsión ---
+        this.heatWobbleAngle += this.heatWobbleSpeed * dt;
     }
 
     draw(ctx) {
@@ -26,8 +31,16 @@ export default class SmokeParticle {
         const currentSize = this.size + (1 - lifeProgress) * (this.maxSize - this.size);
         const alpha = lifeProgress * (this.isNight ? 0.5 : 0.4);
 
+        // --- NUEVO: Efecto de distorsión por calor ---
+        // La distorsión es más fuerte al principio (cuando la partícula está "caliente") y se desvanece.
+        const wobbleAmount = (1 - lifeProgress) * 2.5; 
+        const wobbleX = Math.cos(this.heatWobbleAngle) * wobbleAmount;
+        const wobbleY = Math.sin(this.heatWobbleAngle * 1.5) * wobbleAmount; // Frecuencia diferente para el eje Y
+        const drawX = this.x + wobbleX;
+        const drawY = this.y + wobbleY;
+
         ctx.save();
-        const gradient = ctx.createRadialGradient(this.x, this.y, 0, this.x, this.y, currentSize);
+        const gradient = ctx.createRadialGradient(drawX, drawY, 0, drawX, drawY, currentSize);
         if (this.isNight) {
             gradient.addColorStop(0, `rgba(100, 100, 100, ${alpha})`);
             gradient.addColorStop(1, `rgba(60, 60, 60, 0)`);
@@ -38,7 +51,7 @@ export default class SmokeParticle {
         
         ctx.fillStyle = gradient;
         ctx.beginPath();
-        ctx.arc(this.x, this.y, currentSize, 0, Math.PI * 2);
+        ctx.arc(drawX, drawY, currentSize, 0, Math.PI * 2);
         ctx.fill();
         ctx.restore();
     }
