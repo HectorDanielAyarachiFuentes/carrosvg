@@ -12,7 +12,7 @@ export default class Billboard {
 
     reset() {
         // Posiciona el cartel fuera de la pantalla a la derecha, con algo de aleatoriedad
-        this.x = Config.CANVAS_WIDTH + Math.random() * Config.CANVAS_WIDTH * 1.5;
+        this.x = Config.CANVAS_WIDTH + Math.random() * Config.CANVAS_WIDTH * 2.5;
         // Posiciona el cartel por encima del suelo, con algo de variación vertical
         this.y = Config.CANVAS_HEIGHT - this.height - (Math.random() * 20 + 30);
     }
