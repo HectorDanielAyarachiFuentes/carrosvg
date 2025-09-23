@@ -18,7 +18,9 @@ import Biplane from '../classes/Biplane.js';
 import DustParticle from '../classes/DustParticle.js'; // Importa la nueva clase de polvo
 import HUD from '../classes/HUD.js';
 import Particle from '../classes/Particle.js';
-import Critter from '../classes/Critter.js'; // Importa la nueva clase de animales
+import Critter from '../classes/Critter.js';
+import Cityscape from '../classes/Cityscape.js'; // NUEVO: Paisaje urbano distante
+import NuclearPlant from '../classes/NuclearPlant.js'; // NUEVO: Central nuclear como hito
 
 // --- Estado Global de la Animación ---
 const state = {
@@ -45,6 +47,8 @@ const state = {
         ufo: null,
         radio: null,
         biplane: null,
+        cityscape: null, // NUEVO
+        nuclearPlant: null, // NUEVO
         hud: null,
     }
 };
@@ -121,6 +125,10 @@ function update(deltaTime) {
     state.elements.biplane.update(deltaTime, state.isNight);
     state.elements.hud.update(state.isNight, deltaTime, state.cycleProgress, state.truckSpeedMultiplier); // Actualiza el DOM del HUD
     
+    // --- NUEVO: Actualizar nuevos elementos de escenario ---
+    state.elements.cityscape.update(deltaTime, state.truckSpeedMultiplier);
+    state.elements.nuclearPlant.update(deltaTime, state.truckSpeedMultiplier);
+
     // --- NUEVO: Partículas de cambio de canción ---
     if (state.elements.radio.songJustChanged) {
         const radioVizX = state.elements.truck.x + 75;
@@ -159,6 +167,9 @@ function draw(ctx, timestamp) { // Recibe timestamp para animaciones consistente
     // El orden de dibujado es importante (de atrás hacia adelante)
     drawSky(ctx);
     drawSunMoon(ctx);
+
+    // --- NUEVO: Dibujar la ciudad distante detrás de las montañas ---
+    state.elements.cityscape.draw(ctx, state.isNight, timestamp);
     
     // Estrellas y lluvia
     if (state.isNight) {
@@ -169,6 +180,9 @@ function draw(ctx, timestamp) { // Recibe timestamp para animaciones consistente
     state.elements.mountains.forEach(m => m.draw(ctx));
     state.elements.hills.forEach(h => h.draw(ctx));
     state.elements.clouds.forEach(c => c.draw(ctx));
+
+    // --- NUEVO: Dibujar la central nuclear en el plano medio ---
+    state.elements.nuclearPlant.draw(ctx, state.isNight);
     state.elements.biplane.draw(ctx);
     state.elements.ufo.draw(ctx);
 
@@ -515,6 +529,9 @@ async function start() {
 
         // Inicializar la radio después del camión
         state.elements.radio = new Radio(musicTracks, state.elements.truck);
+
+        state.elements.cityscape = new Cityscape();
+        state.elements.nuclearPlant = new NuclearPlant();
 
         // Inicializar el HUD
         state.elements.hud = new HUD(state.elements.radio);
