@@ -11,6 +11,7 @@ import Cow from '../classes/Cow.js';
 import Truck from '../classes/Truck.js';
 import UFO from '../classes/UFO.js';
 import RainDrop from '../classes/RainDrop.js';
+import Radio from '../classes/Radio.js';
 
 // --- Estado Global de la Animación ---
 const state = {
@@ -29,6 +30,7 @@ const state = {
         stars: [],
         truck: null,
         ufo: null,
+        radio: null,
     }
 };
 
@@ -72,6 +74,7 @@ function update(deltaTime) {
     // Actualizar elementos principales
     state.elements.truck.update(deltaTime, state.isNight);
     state.elements.ufo.update(deltaTime, state.cycleProgress, state.elements.trees, state.elements.cows, state.assets.mooSound);
+    state.elements.radio.update(deltaTime, keys);
     
     // Reiniciar vacas para el siguiente ciclo
     if (state.cycleProgress > 0.95) {
@@ -105,6 +108,7 @@ function draw(ctx) {
     state.elements.cows.forEach(c => c.draw(ctx, state.assets.cow));
     
     state.elements.truck.draw(ctx, state.assets.truck, state.assets.wheels);
+    state.elements.radio.draw(ctx);
 
     // Efectos (se dibujan encima de sus objetivos)
     state.elements.ufo.drawBeams(ctx, state.assets.cow);
@@ -200,21 +204,33 @@ async function start() {
     // Configurar manejadores de eventos
     setupInputHandlers();
     // Añadir listener para reanudar audio en la primera interacción
-    window.addEventListener('keydown', resumeAudio, { once: true });
-
+    const resumeAndSetupRadioKey = (e) => {
+        resumeAudio();
+        // Añadir la tecla 'R' a nuestro objeto de teclas para la radio
+        if (!keys.KeyR) {
+            keys.KeyR = { pressed: false };
+            window.addEventListener('keydown', (e) => {
+                if (e.code === 'KeyR') keys.KeyR.pressed = true;
+            });
+            window.addEventListener('keyup', (e) => {
+                if (e.code === 'KeyR') keys.KeyR.pressed = false;
+            });
+        }
+    };
+    window.addEventListener('keydown', resumeAndSetupRadioKey, { once: true });
 
     try {
         // Cargar todos los assets en paralelo
-        const [truckImg, wheelsImg, treeImg, cowImg, mooSound] = await Promise.all([
+        const [truckImg, wheelsImg, treeImg, cowImg, mooSound, radioMusic] = await Promise.all([
             loadImage('svg/truck.svg'),
             loadImage('svg/wheels.svg'),
             loadImage('svg/tree.svg'),
             loadImage('svg/cow.svg'),
-            loadAudio('sonidos/moo.mp3', getAudioContext())
+            loadAudio('sonidos/moo.mp3', getAudioContext()),
+            loadAudio('sonidos/Un Montón de Estrellas - Santiago Cañete.mp3', getAudioContext())
         ]);
 
-        state.assets = { truck: truckImg, wheels: wheelsImg, tree: treeImg, cow: cowImg, mooSound: mooSound };
-
+        state.assets = { truck: truckImg, wheels: wheelsImg, tree: treeImg, cow: cowImg, mooSound: mooSound, radioMusic: radioMusic };
         // Inicializar todos los objetos de la animación
         state.elements.truck = new Truck();
         state.elements.ufo = new UFO();
@@ -240,6 +256,9 @@ async function start() {
             alpha: Math.random(),
             twinkleSpeed: Math.random() * 0.05
         }));
+
+        // Inicializar la radio después del camión
+        state.elements.radio = new Radio(state.assets.radioMusic, state.elements.truck);
 
         // Iniciar el bucle de animación
         requestAnimationFrame(animate);
