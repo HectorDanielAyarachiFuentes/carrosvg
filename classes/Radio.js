@@ -12,65 +12,88 @@ export default class Radio {
         this.visualizerAngle = 0;
         this.currentTrackIndex = 0;
         this.songJustChanged = false; // Flag for particle effect
+
+        // --- NUEVO: Estado para manejar pulsaciones de teclas únicas ---
+        this.rKeyPressed = false;
+        this.mKeyPressed = false;
     }
 
-    async toggle() {
+    // --- REESTRUCTURADO: Lógica más clara y robusta ---
+
+    /** Detiene la reproducción actual y limpia los recursos de audio. */
+    stopPlayback() {
+        if (this.radioAudioSource) {
+            this.radioAudioSource.stop();
+            this.radioAudioSource.disconnect();
+            if (this.analyser) this.analyser.disconnect();
+            this.radioAudioSource = null;
+        }
+        this.isRadioOn = false;
+    }
+
+    /** Inicia la reproducción de la pista actual. */
+    startPlayback() {
         const audioCtx = getAudioContext();
-        if (!audioCtx || this.musicTracks.length === 0) return;
-
-        // --- APAGAR LA RADIO ---
-        if (this.isRadioOn) {
-            if (this.radioAudioSource) {
-                this.radioAudioSource.stop();
-                this.radioAudioSource.disconnect();
-                this.radioAudioSource = null;
-            }
-            this.isRadioOn = false;
-            return;
-        }
-
-        // --- ENCENDER LA RADIO ---
-        if (this.isLoading) return; // Evitar múltiples cargas simultáneas
-
-        this.isLoading = true;
-        
         const currentTrack = this.musicTracks[this.currentTrackIndex];
-        if (!currentTrack) {
-            this.isLoading = false;
-            return;
-        }
 
-        // Si el buffer de la canción no está cargado, cargarlo ahora.
-        if (!currentTrack.buffer) {
-            currentTrack.buffer = await loadAudio(currentTrack.src, audioCtx);
-        }
-
-        this.isLoading = false;
-
-        // Si la carga falló, o si el usuario apagó la radio mientras cargaba
-        if (!currentTrack.buffer || this.isRadioOn) {
-            if (!currentTrack.buffer) console.error(`No se pudo cargar la canción: ${currentTrack.name}`);
-            return;
-        }
-
-        // Reanudar el contexto de audio si está suspendido (necesario por políticas del navegador)
+        // Asegurarse de que el contexto de audio esté activo
         if (audioCtx.state === 'suspended') {
             audioCtx.resume();
         }
 
-        // --- NUEVO: Configurar Analyser para el ritmo ---
+        // Configurar Analyser para el ritmo
         this.analyser = audioCtx.createAnalyser();
         this.analyser.fftSize = 256; // Tamaño pequeño para buen rendimiento
         const bufferLength = this.analyser.frequencyBinCount;
         this.frequencyData = new Uint8Array(bufferLength);
 
+        // Crear y conectar la fuente de audio
         this.radioAudioSource = audioCtx.createBufferSource();
         this.radioAudioSource.buffer = currentTrack.buffer;
         this.radioAudioSource.loop = true;
         this.radioAudioSource.connect(this.analyser);
         this.analyser.connect(audioCtx.destination);
         this.radioAudioSource.start(0);
+
         this.isRadioOn = true;
+    }
+
+    async toggle() {
+        if (this.isLoading) return; // No hacer nada si ya se está procesando una acción
+
+        // Si la radio está encendida, simplemente la apagamos.
+        if (this.isRadioOn) {
+            this.stopPlayback();
+            return;
+        }
+
+        // Si está apagada, intentamos encenderla.
+        this.isLoading = true;
+
+        const audioCtx = getAudioContext();
+        const currentTrack = this.musicTracks[this.currentTrackIndex];
+
+        if (!currentTrack) {
+            this.isLoading = false;
+            return;
+        }
+
+        // Cargar el audio si no está ya en el buffer
+        if (!currentTrack.buffer) {
+            try {
+                currentTrack.buffer = await loadAudio(currentTrack.src, audioCtx);
+            } catch (error) {
+                console.error(`Error al cargar la canción: ${currentTrack.name}`, error);
+                currentTrack.buffer = null; // Marcar como fallido
+            }
+        }
+
+        this.isLoading = false;
+
+        // Si el buffer existe (la carga fue exitosa), iniciar la reproducción.
+        if (currentTrack.buffer) {
+            this.startPlayback();
+        }
     }
 
     async changeTrack() {
@@ -78,34 +101,32 @@ export default class Radio {
 
         this.songJustChanged = true; // Set flag for particle effect
 
-        const wasOn = this.isRadioOn;
-        if (wasOn) {
-            // Apaga la música actual de forma síncrona
-            if (this.radioAudioSource) {
-                this.radioAudioSource.disconnect();
-                this.radioAudioSource.stop();
-                this.radioAudioSource = null;
-            }
-            this.isRadioOn = false;
-        }
+        // Detener la reproducción actual antes de cambiar de pista.
+        this.stopPlayback();
 
         this.currentTrackIndex = (this.currentTrackIndex + 1) % this.musicTracks.length;
 
-        // Si la radio estaba encendida, intenta encenderla con la nueva canción
-        if (wasOn) {
-            await this.toggle(); // toggle se encargará de cargar y reproducir
-        }
+        // --- MODIFICADO: Siempre enciende la radio al cambiar de canción ---
+        // Esto hace que la tecla 'M' sea más útil: siempre resulta en música sonando.
+        await this.toggle(); // Llama a toggle para cargar (si es necesario) y reproducir la nueva pista.
     }
 
     update(deltaTime, keys) {
-        // Asumiendo que input.js provee un estado 'justPressed'
-        if (keys.KeyR?.justPressed) {
-            this.toggle();
+        // --- MODIFICADO: Lógica para detectar una sola pulsación de tecla ---
+        // Tecla 'R' o 'r' para encender/apagar la radio
+        if ((keys.r || keys.R) && !this.rKeyPressed) {
+            this.toggle(); // Llama a la función de encendido/apagado
+            this.rKeyPressed = true; // Marcar como presionada
+        } else if (!keys.r && !keys.R) {
+            this.rKeyPressed = false; // Resetear cuando se suelta
         }
 
-        // Asumiendo que input.js provee un estado 'justPressed'
-        if (keys.KeyM?.justPressed) {
+        // Tecla 'M' o 'm' para cambiar de canción
+        if ((keys.m || keys.M) && !this.mKeyPressed) {
             this.changeTrack();
+            this.mKeyPressed = true; // Marcar como presionada
+        } else if (!keys.m && !keys.M) {
+            this.mKeyPressed = false; // Resetear cuando se suelta
         }
 
         if (this.isRadioOn) {

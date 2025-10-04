@@ -375,8 +375,8 @@ canvas {
 
 /* Ocultar instrucciones de teclado en móvil, ya que tenemos botones */
 @media (hover: none), (max-width: 800px) {
-    /* Ocultar el panel de información del escritorio en móvil */
-    #hud-panel {
+    /* Ocultar solo los controles de teclado, no todo el panel */
+    #hud-controls {
         display: none;
     }
 

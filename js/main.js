@@ -487,10 +487,16 @@ function setupMobileControls() {
     const setupHoldableButton = (element, key) => {
         const press = (e) => { e.preventDefault(); keys[key] = true; };
         const release = (e) => { e.preventDefault(); keys[key] = false; };
-        
+
+        // Eventos táctiles para dispositivos móviles
         element.addEventListener('touchstart', press, { passive: false });
         element.addEventListener('touchend', release, { passive: false });
         element.addEventListener('touchcancel', release, { passive: false });
+
+        // Fallback para el ratón en escritorio (útil para depuración y ventanas pequeñas)
+        element.addEventListener('mousedown', press, { passive: false });
+        element.addEventListener('mouseup', release, { passive: false });
+        element.addEventListener('mouseleave', release, { passive: false }); // Si el ratón se sale del botón
     };
 
     setupHoldableButton(btnLeft, 'ArrowLeft');
@@ -520,10 +526,12 @@ function setupMobileControls() {
  * @param {AudioContext} audioCtx - El contexto de audio.
  */
 function preloadFirstTrack(musicTracks, audioCtx) {
-    if (musicTracks.length > 0 && !musicTracks[0].buffer) {
-        loadAudio(musicTracks[0].src, audioCtx).then(buffer => {
-            musicTracks[0].buffer = buffer;
-        }).catch(err => console.error('Error al precargar la canción:', err));
+    // Solo precarga el audio, no lo reproduce.
+    // El buffer se asigna para que esté listo cuando el usuario presione 'R' o 'M'.
+    if (musicTracks.length > 0 && musicTracks[0].src && !musicTracks[0].buffer) {
+        loadAudio(musicTracks[0].src, audioCtx)
+            .then(buffer => { musicTracks[0].buffer = buffer; })
+            .catch(err => console.error('Error al precargar la primera canción:', err));
     }
 }
 
@@ -541,6 +549,17 @@ async function start() {
     // Configurar manejadores de eventos
     setupInputHandlers();
     setupMobileControls();
+
+    // --- NUEVO: Activar el audio en la primera interacción del usuario ---
+    // Los navegadores modernos requieren una interacción para iniciar el audio.
+    const activateAudio = () => {
+        resumeAudio();
+        // Eliminar los listeners una vez que el audio está activo.
+        document.removeEventListener('click', activateAudio);
+        document.removeEventListener('keydown', activateAudio);
+    };
+    document.addEventListener('click', activateAudio);
+    document.addEventListener('keydown', activateAudio);
     
     const audioCtx = getAudioContext();
 
