@@ -26,6 +26,7 @@ import NuclearPlant from '../classes/NuclearPlant.js'; // NUEVO: Central nuclear
 const state = {
     lastTime: 0,
     cycleProgress: 0, // 0 a 1
+    timeOfDay: 'day', // NUEVO: 'day', 'sunset', 'dusk', 'night', 'dawn'
     isNight: false,
     fogIntensity: 0, // 0 a 1, calculado en update
     truckSpeedMultiplier: 1.0,
@@ -72,6 +73,24 @@ function animate(timestamp) {
     requestAnimationFrame(animate);
 }
 
+// --- NUEVO: Función para determinar el estado del ciclo día/noche ---
+function updateCycleState() {
+    const progress = state.cycleProgress;
+    state.isNight = progress >= 0.60 && progress < 0.90;
+
+    if (progress >= 0.90) {
+        state.timeOfDay = 'dawn'; // Amanecer
+    } else if (progress >= 0.60) {
+        state.timeOfDay = 'night'; // Noche
+    } else if (progress >= 0.50) {
+        state.timeOfDay = 'dusk'; // Anochecer
+    } else if (progress >= 0.40) {
+        state.timeOfDay = 'sunset'; // Atardecer
+    } else {
+        state.timeOfDay = 'day'; // Día
+    }
+}
+
 // --- Función de Actualización General ---
 function update(deltaTime) {
     // Actualizar velocidad del camión
@@ -79,8 +98,8 @@ function update(deltaTime) {
     state.truckSpeedMultiplier = state.elements.truck.speedMultiplier;
 
     // Progreso del ciclo día-noche
-    state.cycleProgress = (state.lastTime % Config.CYCLE_DURATION) / Config.CYCLE_DURATION;
-    state.isNight = state.cycleProgress >= 0.60 && state.cycleProgress < 0.90;
+    state.cycleProgress = (state.lastTime % Config.CYCLE_DURATION) / Config.CYCLE_DURATION;    
+    updateCycleState(); // Actualiza state.isNight y state.timeOfDay
 
     // --- MODIFICADO: Viento más fuerte y con más variación ---
     state.windStrength = Math.sin(state.lastTime / 5000) * 25 + 35; // Varia entre 10 y 60

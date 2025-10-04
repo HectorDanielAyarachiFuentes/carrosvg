@@ -10,10 +10,6 @@ export default class Radio {
         this.isLoading = false;
         this.radioAudioSource = null;
         this.visualizerAngle = 0;
-        this.analyser = null;
-        this.frequencyData = null;
-        this.rKeyPressed = false; // Para manejar una sola pulsación de tecla
-        this.mKeyPressed = false; // Para cambiar de canción
         this.currentTrackIndex = 0;
         this.songJustChanged = false; // Flag for particle effect
     }
@@ -102,22 +98,14 @@ export default class Radio {
     }
 
     update(deltaTime, keys) {
-        if (keys.KeyR && keys.KeyR.pressed) {
-            if (!this.rKeyPressed) {
-                this.toggle();
-                this.rKeyPressed = true;
-            }
-        } else {
-            this.rKeyPressed = false;
+        // Asumiendo que input.js provee un estado 'justPressed'
+        if (keys.KeyR?.justPressed) {
+            this.toggle();
         }
 
-        if (keys.KeyM && keys.KeyM.pressed) {
-            if (!this.mKeyPressed) {
-                this.changeTrack();
-                this.mKeyPressed = true;
-            }
-        } else {
-            this.mKeyPressed = false;
+        // Asumiendo que input.js provee un estado 'justPressed'
+        if (keys.KeyM?.justPressed) {
+            this.changeTrack();
         }
 
         if (this.isRadioOn) {
