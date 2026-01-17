@@ -12,9 +12,9 @@ export default class Truck {
         this.bounceAngle = 0;
         this.pipeOffsetX = 45;
         this.pipeOffsetY = 50;
-        
+
         this.speedMultiplier = 1.0;
-        
+
         this.smokeParticles = [];
         this.dustParticles = [];
         this.splashParticles = [];
@@ -167,17 +167,21 @@ export default class Truck {
         }
     }
 
-    draw(ctx, truckImg, wheelsImg, isNight, fogIntensity) {
+    draw(ctx, truckImg, wheelsImg, isNight, fogIntensity, truckCanvas = null, wheelsCanvas = null) {
         // Las partículas se dibujan primero
         this.smokeParticles.forEach(p => p.draw(ctx));
         this.dustParticles.forEach(p => p.draw(ctx));
         this.splashParticles.forEach(p => p.draw(ctx));
 
-        if (wheelsImg) {
-            ctx.drawImage(wheelsImg, this.x, Config.CANVAS_HEIGHT - 15);
+        // --- OPTIMIZADO: Usar OffscreenCanvas pre-renderizado si está disponible ---
+        const wheelsSource = wheelsCanvas || wheelsImg;
+        const truckSource = truckCanvas || truckImg;
+
+        if (wheelsSource) {
+            ctx.drawImage(wheelsSource, this.x, Config.CANVAS_HEIGHT - 15);
         }
-        if (truckImg) {
-            ctx.drawImage(truckImg, this.x, this.y);
+        if (truckSource) {
+            ctx.drawImage(truckSource, this.x, this.y);
         }
 
         // --- NUEVO: Dibujar la antena ---
@@ -194,7 +198,7 @@ export default class Truck {
         // --- LUCES ---
         // Faro principal (solo de noche)
         if (isNight) {
-             this.drawHeadlight(ctx);
+            this.drawHeadlight(ctx);
         }
         // Luces antiniebla (cuando hay niebla)
         if (fogIntensity > 0) {
@@ -242,7 +246,7 @@ export default class Truck {
         const trailGradient = ctx.createLinearGradient(headLightX, 0, headLightX + trailLength, 0);
         trailGradient.addColorStop(0, `rgba(255, 255, 224, ${flicker * 0.25})`);
         trailGradient.addColorStop(1, 'rgba(255, 255, 224, 0)');
-        
+
         ctx.fillStyle = trailGradient;
         ctx.beginPath();
         ctx.moveTo(headLightX, headLightYTop);

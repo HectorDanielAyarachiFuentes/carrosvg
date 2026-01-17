@@ -1,5 +1,5 @@
 import * as Config from './config.js';
-import { loadImage, loadAudio, lerp, lerpColor } from './utils.js';
+import { loadImage, loadAudio, lerp, lerpColor, createOffscreenFromImage, createStarsCanvas } from './utils.js';
 import { setupInputHandlers, keys } from './input.js';
 import { getAudioContext, resumeAudio } from './audio.js';
 
@@ -21,6 +21,8 @@ import Particle from '../classes/Particle.js';
 import Critter from '../classes/Critter.js';
 import Cityscape from '../classes/Cityscape.js'; // NUEVO: Paisaje urbano distante
 import NuclearPlant from '../classes/NuclearPlant.js'; // NUEVO: Central nuclear como hito
+import BirdFlock from '../classes/BirdFlock.js'; // NUEVO: Bandadas de pájaros
+import RoadSign from '../classes/RoadSign.js'; // NUEVO: Señales de tráfico
 
 // --- Estado Global de la Animación ---
 const state = {
@@ -50,7 +52,13 @@ const state = {
         biplane: null,
         cityscape: null, // NUEVO
         nuclearPlant: null, // NUEVO
+        birdFlocks: [], // NUEVO: Bandadas de pájaros
+        roadSigns: [], // NUEVO: Señales de tráfico
         hud: null,
+    },
+    // --- NUEVO: Canvas pre-renderizados para optimización ---
+    offscreenCanvases: {
+        starsCanvas: null,  // Canvas con estrellas pre-renderizadas
     }
 };
 
@@ -98,7 +106,7 @@ function update(deltaTime) {
     state.truckSpeedMultiplier = state.elements.truck.speedMultiplier;
 
     // Progreso del ciclo día-noche
-    state.cycleProgress = (state.lastTime % Config.CYCLE_DURATION) / Config.CYCLE_DURATION;    
+    state.cycleProgress = (state.lastTime % Config.CYCLE_DURATION) / Config.CYCLE_DURATION;
     updateCycleState(); // Actualiza state.isNight y state.timeOfDay
 
     // --- MODIFICADO: Viento más fuerte y con más variación ---
@@ -129,6 +137,10 @@ function update(deltaTime) {
     state.elements.cows.forEach(c => c.update(deltaTime, state.truckSpeedMultiplier));
     state.elements.billboards.forEach(b => b.update(deltaTime, state.truckSpeedMultiplier)); // Actualiza los carteles
     state.elements.critters.forEach(c => c.update(deltaTime, state.truckSpeedMultiplier, state.cycleProgress));
+    // --- NUEVO: Actualizar bandadas de pájaros ---
+    state.elements.birdFlocks.forEach(f => f.update(deltaTime, state.truckSpeedMultiplier, state.cycleProgress));
+    // --- NUEVO: Actualizar señales de tráfico ---
+    state.elements.roadSigns.forEach(s => s.update(deltaTime, state.truckSpeedMultiplier));
     // --- MODIFICADO: Pasar la fuerza del viento a las gotas de lluvia ---
     state.elements.raindrops.forEach(r => r.update(deltaTime, state.windStrength));
     // --- NUEVO: Actualizar marcas de neumáticos ---
@@ -143,7 +155,7 @@ function update(deltaTime) {
     state.elements.radio.update(deltaTime, keys); // Actualiza el estado de la radio
     state.elements.biplane.update(deltaTime, state.isNight);
     state.elements.hud.update(state.isNight, deltaTime, state.cycleProgress, state.truckSpeedMultiplier); // Actualiza el DOM del HUD
-    
+
     // --- NUEVO: Actualizar nuevos elementos de escenario ---
     state.elements.cityscape.update(deltaTime, state.truckSpeedMultiplier);
     state.elements.nuclearPlant.update(deltaTime, state.truckSpeedMultiplier);
@@ -187,9 +199,12 @@ function draw(ctx, timestamp) { // Recibe timestamp para animaciones consistente
     drawSky(ctx);
     drawSunMoon(ctx);
 
+    // --- NUEVO: Dibujar el arcoíris post-lluvia (detrás de todo el escenario) ---
+    drawRainbow(ctx);
+
     // --- NUEVO: Dibujar la ciudad distante detrás de las montañas ---
     state.elements.cityscape.draw(ctx, state.isNight, timestamp);
-    
+
     // Estrellas y lluvia
     if (state.isNight) {
         drawStars(ctx);
@@ -199,6 +214,9 @@ function draw(ctx, timestamp) { // Recibe timestamp para animaciones consistente
     state.elements.mountains.forEach(m => m.draw(ctx));
     state.elements.hills.forEach(h => h.draw(ctx));
     state.elements.clouds.forEach(c => c.draw(ctx));
+
+    // --- NUEVO: Dibujar bandadas de pájaros (entre las nubes y los elementos de primer plano) ---
+    state.elements.birdFlocks.forEach(f => f.draw(ctx));
 
     // --- NUEVO: Dibujar la central nuclear en el plano medio ---
     state.elements.nuclearPlant.draw(ctx, state.isNight);
@@ -211,14 +229,25 @@ function draw(ctx, timestamp) { // Recibe timestamp para animaciones consistente
     drawHeatShimmer(ctx, timestamp);
 
     state.elements.billboards.forEach(b => b.draw(ctx, state.isNight, state.cycleProgress)); // Dibuja los carteles
-    
+
+    // --- NUEVO: Dibujar señales de tráfico (cerca del suelo, antes de los árboles) ---
+    state.elements.roadSigns.forEach(s => s.draw(ctx, state.isNight));
+
     // OPTIMIZACIÓN: Pasar timestamp para animaciones consistentes como el balanceo de los árboles
     state.elements.trees.forEach(t => t.draw(ctx, state.windStrength, timestamp));
     state.elements.cows.forEach(c => c.draw(ctx, state.assets.cow));
     state.elements.critters.forEach(c => c.draw(ctx)); // Dibuja los animales
-    
-    // --- MODIFICADO: Pasar isNight y fogIntensity para controlar las luces del camión ---
-    state.elements.truck.draw(ctx, state.assets.truck, state.assets.wheels, state.isNight, state.fogIntensity);
+
+    // --- OPTIMIZADO: Pasar isNight, fogIntensity y los OffscreenCanvas pre-renderizados ---
+    state.elements.truck.draw(
+        ctx,
+        state.assets.truck,
+        state.assets.wheels,
+        state.isNight,
+        state.fogIntensity,
+        state.assets.truckCanvas,
+        state.assets.wheelsCanvas
+    );
     state.elements.radio.draw(ctx);
 
     // --- NUEVO: Dibujar la niebla matutina ---
@@ -230,7 +259,7 @@ function draw(ctx, timestamp) { // Recibe timestamp para animaciones consistente
 
     // --- NUEVO: Dibujar partículas ---
     state.elements.particles.forEach(p => p.draw(ctx));
-    
+
     // --- NUEVO: Dibujar Lens Flare ---
     drawLensFlare(ctx);
 
@@ -247,7 +276,7 @@ function drawSky(ctx) {
     if (progress > 0.40 && progress < 0.50) {
         const t = (progress - 0.40) / 0.10;
         skyColor = lerpColor(Config.DAY_SKY, Config.SUNSET_SKY, t);
-    } 
+    }
     // Anochecer (Atardecer -> Noche) 0.50 -> 0.60
     else if (progress >= 0.50 && progress < 0.60) {
         const t = (progress - 0.50) / 0.10;
@@ -284,13 +313,13 @@ function drawSunMoon(ctx) {
         ctx.beginPath();
         ctx.arc(x, y, 20, 0, Math.PI * 2);
         ctx.fill();
-    } 
+    }
     // Luna: visible durante la noche
     else if (state.cycleProgress > 0.60) { // La luna sale al empezar la noche
         const moonProgress = (state.cycleProgress - 0.60) / (1.0 - 0.60);
         const x = lerp(Config.CANVAS_WIDTH + 40, -40, moonProgress);
         const y = 80 + Math.sin(moonProgress * Math.PI) * -50; // Arco suave
-        
+
         ctx.fillStyle = Config.MOON_COLOR;
         ctx.shadowColor = Config.MOON_COLOR;
         ctx.shadowBlur = 10;
@@ -318,17 +347,46 @@ function drawStars(ctx) {
     const nightProgress = (state.cycleProgress - 0.60) / (0.90 - 0.60);
     const maxAlpha = Math.sin(nightProgress * Math.PI);
 
-    ctx.fillStyle = '#FFFFFF';
-    state.elements.stars.forEach(star => {
-        star.alpha += star.twinkleSpeed;
-        if (star.alpha > 1 || star.alpha < 0) star.twinkleSpeed *= -1;
-        
-        ctx.globalAlpha = star.alpha * maxAlpha;
-        ctx.beginPath();
-        ctx.arc(star.x, star.y, star.radius, 0, Math.PI * 2);
-        ctx.fill();
-    });
-    ctx.globalAlpha = 1;
+    // --- OPTIMIZADO: Usar canvas pre-renderizado si está disponible ---
+    if (state.offscreenCanvases.starsCanvas) {
+        // Dibujar el canvas de estrellas con la opacidad calculada
+        ctx.globalAlpha = maxAlpha;
+        ctx.drawImage(state.offscreenCanvases.starsCanvas, 0, 0);
+        ctx.globalAlpha = 1;
+
+        // Añadir efecto de parpadeo solo a algunas estrellas destacadas
+        // Esto es mucho más eficiente que dibujar 100 círculos individuales
+        const twinkleCount = 15; // Solo hacemos parpadear 15 estrellas
+        ctx.fillStyle = '#FFFFFF';
+        for (let i = 0; i < twinkleCount && i < state.elements.stars.length; i++) {
+            const star = state.elements.stars[i];
+            star.alpha += star.twinkleSpeed;
+            if (star.alpha > 1 || star.alpha < 0) star.twinkleSpeed *= -1;
+
+            // Solo dibujar el brillo adicional del parpadeo
+            const twinkleIntensity = (star.alpha - 0.5) * maxAlpha;
+            if (twinkleIntensity > 0) {
+                ctx.globalAlpha = twinkleIntensity * 0.5;
+                ctx.beginPath();
+                ctx.arc(star.x, star.y, star.radius * 2, 0, Math.PI * 2);
+                ctx.fill();
+            }
+        }
+        ctx.globalAlpha = 1;
+    } else {
+        // Fallback: dibujo tradicional si no hay canvas pre-renderizado
+        ctx.fillStyle = '#FFFFFF';
+        state.elements.stars.forEach(star => {
+            star.alpha += star.twinkleSpeed;
+            if (star.alpha > 1 || star.alpha < 0) star.twinkleSpeed *= -1;
+
+            ctx.globalAlpha = star.alpha * maxAlpha;
+            ctx.beginPath();
+            ctx.arc(star.x, star.y, star.radius, 0, Math.PI * 2);
+            ctx.fill();
+        });
+        ctx.globalAlpha = 1;
+    }
 }
 
 /**
@@ -354,6 +412,98 @@ function drawFog(ctx) {
 
     ctx.fillStyle = gradient;
     ctx.fillRect(0, groundY - fogHeight, Config.CANVAS_WIDTH, fogHeight);
+}
+
+/**
+ * Dibuja un arcoíris espectacular después de la lluvia nocturna.
+ * Aparece durante el amanecer y las primeras horas de la mañana.
+ * @param {CanvasRenderingContext2D} ctx El contexto del canvas.
+ */
+function drawRainbow(ctx) {
+    const progress = state.cycleProgress;
+
+    // El arcoíris aparece después de la lluvia (que ocurre durante la noche 0.60-0.90)
+    // Visible desde el final de la noche (0.92) hasta la mañana (0.15)
+    const RAINBOW_START = 0.92;  // Comienza a aparecer
+    const RAINBOW_PEAK = 0.02;   // Máxima intensidad (después de las 0.0)
+    const RAINBOW_END = 0.15;    // Desaparece completamente
+
+    let intensity = 0;
+
+    // Calcular la intensidad basada en el progreso del ciclo
+    if (progress >= RAINBOW_START) {
+        // Aparición gradual desde 0.92 hasta 1.0
+        intensity = (progress - RAINBOW_START) / (1.0 - RAINBOW_START);
+    } else if (progress < RAINBOW_PEAK) {
+        // Máxima intensidad
+        intensity = 1.0;
+    } else if (progress < RAINBOW_END) {
+        // Desaparición gradual desde RAINBOW_PEAK hasta RAINBOW_END
+        intensity = 1.0 - ((progress - RAINBOW_PEAK) / (RAINBOW_END - RAINBOW_PEAK));
+    }
+
+    if (intensity <= 0) return;
+
+    ctx.save();
+
+    // Posición y dimensiones del arcoíris
+    const centerX = Config.CANVAS_WIDTH * 0.85; // Hacia la derecha del canvas
+    const centerY = Config.CANVAS_HEIGHT + 30;   // Centro debajo del horizonte
+    const outerRadius = 280;                      // Radio exterior del arcoíris
+    const bandWidth = 12;                         // Ancho de cada banda de color
+
+    // Opacidad global del arcoíris basada en la intensidad
+    ctx.globalAlpha = intensity * 0.7;
+
+    // Dibujar cada banda del arcoíris (de exterior a interior)
+    const colors = Config.RAINBOW_COLORS;
+
+    for (let i = 0; i < colors.length; i++) {
+        const radius = outerRadius - (i * bandWidth);
+
+        // Crear un gradiente para suavizar los bordes de cada banda
+        ctx.beginPath();
+        ctx.arc(centerX, centerY, radius, Math.PI, 0, false); // Solo el arco superior
+        ctx.lineWidth = bandWidth + 2; // Un poco más ancho para suavizar
+
+        // Gradiente radial para efecto de difuminado en los extremos
+        const gradient = ctx.createLinearGradient(
+            centerX - radius, centerY,
+            centerX + radius, centerY
+        );
+
+        // Extraer el color base y aplicar fade en los extremos
+        const baseColor = colors[i];
+        const transparentColor = baseColor.replace(/[\d.]+\)$/, '0)');
+
+        gradient.addColorStop(0, transparentColor);    // Fade izquierdo
+        gradient.addColorStop(0.15, baseColor);         // Color completo
+        gradient.addColorStop(0.85, baseColor);         // Color completo
+        gradient.addColorStop(1, transparentColor);    // Fade derecho
+
+        ctx.strokeStyle = gradient;
+        ctx.stroke();
+    }
+
+    // Añadir un brillo difuso detrás del arcoíris para mayor impacto visual
+    const glowRadius = outerRadius + 20;
+    const glow = ctx.createRadialGradient(
+        centerX, centerY, outerRadius - (colors.length * bandWidth) - 20,
+        centerX, centerY, glowRadius
+    );
+    glow.addColorStop(0, 'rgba(255, 255, 255, 0)');
+    glow.addColorStop(0.5, `rgba(255, 255, 220, ${0.15 * intensity})`);
+    glow.addColorStop(1, 'rgba(255, 255, 255, 0)');
+
+    ctx.globalAlpha = intensity * 0.5;
+    ctx.fillStyle = glow;
+    ctx.beginPath();
+    ctx.arc(centerX, centerY, glowRadius, Math.PI, 0, false);
+    ctx.arc(centerX, centerY, outerRadius - (colors.length * bandWidth) - 20, 0, Math.PI, true);
+    ctx.closePath();
+    ctx.fill();
+
+    ctx.restore();
 }
 
 /**
@@ -560,7 +710,7 @@ async function start() {
     };
     document.addEventListener('click', activateAudio);
     document.addEventListener('keydown', activateAudio);
-    
+
     const audioCtx = getAudioContext();
 
     try {
@@ -579,16 +729,20 @@ async function start() {
             loadImage('svg/fox.svg'), // NUEVO: Imagen del zorro
         ]);
 
-        state.assets = { 
-            truck: truckImg, 
-            wheels: wheelsImg, 
-            tree: treeImg, 
-            cow: cowImg, 
-            pilot: pilotImg, 
+        state.assets = {
+            truck: truckImg,
+            wheels: wheelsImg,
+            tree: treeImg,
+            cow: cowImg,
+            pilot: pilotImg,
             mooSound: mooSound,
-            critterImages: { rabbit: rabbitImg, fox: foxImg } // Agrupa las imágenes de los animales
+            critterImages: { rabbit: rabbitImg, fox: foxImg }, // Agrupa las imágenes de los animales
+            // --- NUEVO: Pre-renderizar SVGs en OffscreenCanvas ---
+            truckCanvas: createOffscreenFromImage(truckImg),
+            wheelsCanvas: createOffscreenFromImage(wheelsImg),
+            cowCanvas: createOffscreenFromImage(cowImg),
         };
-        
+
         // Crear una lista de imágenes disponibles para los carteles
         const billboardImages = [pilotImg, billboardImg1, billboardImg2].filter(img => img); // Filtra si alguna imagen no cargó
         state.assets.billboardImages = billboardImages;
@@ -607,7 +761,7 @@ async function start() {
         state.elements.truck = new Truck();
         state.elements.ufo = new UFO();
         state.elements.biplane = new Biplane(state.assets.pilot);
-        
+
         state.elements.mountains = [
             new SceneryObject(100, Config.CANVAS_HEIGHT + 100, 120, 1),
             new SceneryObject(400, Config.CANVAS_HEIGHT + 80, 150, 1),
@@ -626,6 +780,10 @@ async function start() {
         state.elements.billboards = Array.from({ length: 2 }, () => new Billboard(state.assets.billboardImages));
         // Instancia los nuevos animales
         state.elements.critters = Array.from({ length: 3 }, () => new Critter(state.assets.critterImages));
+        // --- NUEVO: Crear bandadas de pájaros ---
+        state.elements.birdFlocks = Array.from({ length: 3 }, () => new BirdFlock());
+        // --- NUEVO: Crear señales de tráfico ---
+        state.elements.roadSigns = Array.from({ length: 4 }, () => new RoadSign());
         state.elements.raindrops = Array.from({ length: 200 }, () => new RainDrop());
         state.elements.stars = Array.from({ length: 100 }, () => ({
             x: Math.random() * Config.CANVAS_WIDTH,
@@ -634,6 +792,14 @@ async function start() {
             alpha: Math.random(),
             twinkleSpeed: Math.random() * 0.05
         }));
+
+        // --- NUEVO: Pre-renderizar las estrellas en un OffscreenCanvas ---
+        state.offscreenCanvases.starsCanvas = createStarsCanvas(
+            Config.CANVAS_WIDTH,
+            Config.CANVAS_HEIGHT,
+            state.elements.stars
+        );
+        console.log('✨ Estrellas pre-renderizadas en OffscreenCanvas');
 
         // Inicializar la radio después del camión
         state.elements.radio = new Radio(musicTracks, state.elements.truck);

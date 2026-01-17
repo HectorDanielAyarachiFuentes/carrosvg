@@ -22,3 +22,14 @@ export const TRUCK_DECELERATION = 0.05;
 export const TRUCK_MAX_SPEED = 2.5;
 export const TRUCK_MIN_SPEED = 0.2;
 export const TRUCK_NATURAL_DECELERATION = 0.01;
+
+// --- Colores del Arcoíris (post-lluvia) ---
+export const RAINBOW_COLORS = [
+    'rgba(255, 0, 0, 0.6)',      // Rojo
+    'rgba(255, 127, 0, 0.6)',    // Naranja
+    'rgba(255, 255, 0, 0.6)',    // Amarillo
+    'rgba(0, 255, 0, 0.6)',      // Verde
+    'rgba(0, 0, 255, 0.6)',      // Azul
+    'rgba(75, 0, 130, 0.6)',     // Índigo
+    'rgba(148, 0, 211, 0.6)'     // Violeta
+];

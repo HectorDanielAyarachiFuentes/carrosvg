@@ -40,3 +40,66 @@ export const loadAudio = (src, audioCtx) => new Promise((resolve) => {
             resolve(null); // Resuelve como nulo para no bloquear la animación
         });
 });
+
+// --- NUEVO: Optimización con OffscreenCanvas ---
+
+/**
+ * Pre-renderiza una imagen en un OffscreenCanvas para evitar conversiones
+ * repetidas de SVG a canvas en cada frame.
+ * @param {HTMLImageElement} image La imagen a pre-renderizar
+ * @param {number} scale Factor de escala opcional (default: 1)
+ * @returns {OffscreenCanvas|HTMLCanvasElement} El canvas pre-renderizado
+ */
+export const createOffscreenFromImage = (image, scale = 1) => {
+    const width = image.width * scale;
+    const height = image.height * scale;
+
+    // Usar OffscreenCanvas si está disponible, sino fallback a HTMLCanvasElement
+    const canvas = typeof OffscreenCanvas !== 'undefined'
+        ? new OffscreenCanvas(width, height)
+        : document.createElement('canvas');
+
+    if (!(canvas instanceof OffscreenCanvas)) {
+        canvas.width = width;
+        canvas.height = height;
+    }
+
+    const ctx = canvas.getContext('2d');
+    ctx.drawImage(image, 0, 0, width, height);
+
+    return canvas;
+};
+
+/**
+ * Pre-renderiza las estrellas en un OffscreenCanvas.
+ * Las estrellas base se dibujan una vez y solo se aplica la opacidad
+ * del parpadeo en tiempo de ejecución.
+ * @param {number} canvasWidth Ancho del canvas
+ * @param {number} canvasHeight Alto del canvas
+ * @param {Array} stars Array de estrellas con posiciones y radios
+ * @returns {OffscreenCanvas|HTMLCanvasElement} Canvas con las estrellas pre-renderizadas
+ */
+export const createStarsCanvas = (canvasWidth, canvasHeight, stars) => {
+    const canvas = typeof OffscreenCanvas !== 'undefined'
+        ? new OffscreenCanvas(canvasWidth, canvasHeight)
+        : document.createElement('canvas');
+
+    if (!(canvas instanceof OffscreenCanvas)) {
+        canvas.width = canvasWidth;
+        canvas.height = canvasHeight;
+    }
+
+    const ctx = canvas.getContext('2d');
+    ctx.fillStyle = '#FFFFFF';
+
+    // Dibujar todas las estrellas en el canvas offscreen
+    stars.forEach(star => {
+        ctx.globalAlpha = 0.8; // Opacidad base alta
+        ctx.beginPath();
+        ctx.arc(star.x, star.y, star.radius, 0, Math.PI * 2);
+        ctx.fill();
+    });
+
+    ctx.globalAlpha = 1;
+    return canvas;
+};
