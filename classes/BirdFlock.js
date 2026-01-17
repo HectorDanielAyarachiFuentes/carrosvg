@@ -28,8 +28,8 @@ export default class BirdFlock {
             this.x = Config.CANVAS_WIDTH + 100;
         }
 
-        // Número de pájaros en la bandada (entre 5 y 12)
-        this.birdCount = Math.floor(Math.random() * 8) + 5;
+        // Número de pájaros en la bandada (reducido para mejor rendimiento)
+        this.birdCount = Math.floor(Math.random() * 5) + 4; // Entre 4 y 8 (antes 5-12)
 
         // Crear los pájaros individuales con posiciones relativas al líder
         this.birds = [];

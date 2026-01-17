@@ -110,9 +110,11 @@ export default class Truck {
     }
 
     updateEmitters(deltaTime, isNight, keys, addSkidMark) {
-        // Humo
+        // OPTIMIZADO: Ajustar intervalos para reducir cantidad de partículas
+
+        // Humo (intervalo aumentado)
         this.smokeEmitterCounter += deltaTime;
-        const smokeInterval = Math.max(80, 300 / this.speedMultiplier);
+        const smokeInterval = Math.max(120, 400 / this.speedMultiplier); // Aumentado de 80/300
         if (this.smokeEmitterCounter > smokeInterval) {
             this.smokeEmitterCounter = 0;
             const pipeX = this.x + this.pipeOffsetX;
@@ -120,50 +122,57 @@ export default class Truck {
             this.smokeParticles.push(new SmokeParticle(pipeX - 10, pipeY, isNight, this.speedMultiplier));
         }
 
-        // --- NUEVO: Marcas de neumáticos y humo al frenar bruscamente ---
+        // Limitar cantidad máxima de partículas de humo
+        if (this.smokeParticles.length > 15) {
+            this.smokeParticles.splice(0, this.smokeParticles.length - 15);
+        }
+
+        // --- Marcas de neumáticos y humo al frenar bruscamente ---
         const isBrakingHard = keys.ArrowLeft && this.speedMultiplier > 1.2;
         if (isBrakingHard && !isNight) {
             this.skidEmitterCounter += deltaTime;
-            if (this.skidEmitterCounter > 50) { // Intervalo para no crear demasiadas marcas
+            if (this.skidEmitterCounter > 80) { // Aumentado de 50
                 this.skidEmitterCounter = 0;
                 const wheelX = this.x + 15;
                 const wheelY = Config.CANVAS_HEIGHT - 3;
-                // Añadir marca de neumático a la lista global
                 addSkidMark(new SkidMark(wheelX, wheelY, this.speedMultiplier));
-                // Añadir humo de las ruedas
                 this.smokeParticles.push(new SmokeParticle(wheelX, wheelY - 5, isNight, 0.5, 'rgba(80,80,80,0.6)'));
             }
         }
 
         if (isNight) {
-            // --- Salpicaduras de agua (solo de noche/lluvia) ---
+            // --- Salpicaduras de agua (reducidas) ---
             this.splashEmitterCounter += deltaTime;
-            const splashInterval = Math.max(25, 160 / this.speedMultiplier);
+            const splashInterval = Math.max(60, 200 / this.speedMultiplier); // Aumentado de 25/160
             if (this.splashEmitterCounter > splashInterval) {
                 this.splashEmitterCounter = 0;
                 const wheelX = this.x + 15;
                 const wheelY = Config.CANVAS_HEIGHT - 3;
-                for (let i = 0; i < 2; i++) { // Un poco menos de partículas de agua
-                    this.splashParticles.push(new SplashParticle(wheelX, wheelY, this.speedMultiplier));
-                }
+                // Solo 1 partícula en lugar de 2
+                this.splashParticles.push(new SplashParticle(wheelX, wheelY, this.speedMultiplier));
             }
-            // Limpiar el polvo si empieza a llover
-            if (this.dustParticles.length > 0) this.dustParticles = [];
+            // Limitar cantidad máxima
+            if (this.splashParticles.length > 10) {
+                this.splashParticles.length = 10;
+            }
+            if (this.dustParticles.length > 0) this.dustParticles.length = 0;
 
         } else {
-            // --- Polvo (solo de día) ---
+            // --- Polvo (reducido) ---
             this.dustEmitterCounter += deltaTime;
-            const dustInterval = Math.max(30, 180 / this.speedMultiplier);
+            const dustInterval = Math.max(60, 250 / this.speedMultiplier); // Aumentado de 30/180
             if (this.dustEmitterCounter > dustInterval) {
                 this.dustEmitterCounter = 0;
                 const wheelX = this.x + 15;
                 const wheelY = Config.CANVAS_HEIGHT - 3;
-                for (let i = 0; i < 2; i++) {
-                    this.dustParticles.push(new DustParticle(wheelX, wheelY, this.speedMultiplier));
-                }
+                // Solo 1 partícula en lugar de 2
+                this.dustParticles.push(new DustParticle(wheelX, wheelY, this.speedMultiplier));
             }
-            // Limpiar salpicaduras si deja de llover
-            if (this.splashParticles.length > 0) this.splashParticles = [];
+            // Limitar cantidad máxima
+            if (this.dustParticles.length > 8) {
+                this.dustParticles.length = 8;
+            }
+            if (this.splashParticles.length > 0) this.splashParticles.length = 0;
         }
     }
 

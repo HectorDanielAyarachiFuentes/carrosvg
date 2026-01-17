@@ -69,20 +69,16 @@ export default class Billboard {
     drawGroundShadow(ctx) {
         const groundY = Config.CANVAS_HEIGHT;
         const shadowOffset = 8 * this.scale;
-
-        ctx.save();
-        ctx.fillStyle = 'rgba(0, 0, 0, 0.25)';
-
-        // Sombra del poste
         const poleWidth = 6 * this.scale;
+
+        // OPTIMIZADO: Sin save/restore innecesario
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.25)';
         ctx.fillRect(
             this.x + this.width / 2 - poleWidth / 2 + shadowOffset,
             groundY - 3,
             poleWidth + 15 * this.scale,
             3
         );
-
-        ctx.restore();
     }
 
     /**

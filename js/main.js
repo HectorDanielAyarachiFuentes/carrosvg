@@ -59,6 +59,13 @@ const state = {
     // --- NUEVO: Canvas pre-renderizados para optimización ---
     offscreenCanvases: {
         starsCanvas: null,  // Canvas con estrellas pre-renderizadas
+    },
+    // --- OPTIMIZACIÓN: Caché de referencias ---
+    cache: {
+        canvas: null,
+        ctx: null,
+        lastHudUpdate: 0,
+        hudUpdateInterval: 100, // Actualizar HUD cada 100ms en lugar de cada frame
     }
 };
 
@@ -68,11 +75,11 @@ function animate(timestamp) {
     const deltaTime = timestamp - state.lastTime;
     state.lastTime = timestamp;
 
-    const canvas = document.getElementById('animationCanvas');
-    const ctx = canvas.getContext('2d');
+    // OPTIMIZACIÓN: Usar referencias cacheadas en lugar de buscar en el DOM cada frame
+    const ctx = state.cache.ctx;
 
     // 1. Actualizar estado de todos los objetos
-    update(deltaTime);
+    update(deltaTime, timestamp);
 
     // 2. Limpiar y dibujar todo
     draw(ctx, timestamp);
@@ -100,7 +107,7 @@ function updateCycleState() {
 }
 
 // --- Función de Actualización General ---
-function update(deltaTime) {
+function update(deltaTime, timestamp) {
     // Actualizar velocidad del camión
     state.elements.truck.updateSpeed(keys, deltaTime);
     state.truckSpeedMultiplier = state.elements.truck.speedMultiplier;
@@ -154,34 +161,46 @@ function update(deltaTime) {
     state.elements.ufo.update(deltaTime, state.cycleProgress, state.elements.trees, state.elements.cows, state.assets.mooSound);
     state.elements.radio.update(deltaTime, keys); // Actualiza el estado de la radio
     state.elements.biplane.update(deltaTime, state.isNight);
-    state.elements.hud.update(state.isNight, deltaTime, state.cycleProgress, state.truckSpeedMultiplier); // Actualiza el DOM del HUD
+
+    // OPTIMIZACIÓN: Throttle del HUD para reducir manipulaciones DOM
+    if (timestamp - state.cache.lastHudUpdate > state.cache.hudUpdateInterval) {
+        state.elements.hud.update(state.isNight, deltaTime, state.cycleProgress, state.truckSpeedMultiplier);
+        state.cache.lastHudUpdate = timestamp;
+    }
 
     // --- NUEVO: Actualizar nuevos elementos de escenario ---
     state.elements.cityscape.update(deltaTime, state.truckSpeedMultiplier);
     state.elements.nuclearPlant.update(deltaTime, state.truckSpeedMultiplier);
 
-    // --- NUEVO: Partículas de cambio de canción ---
+    // --- NUEVO: Partículas de cambio de canción (reducidas para mejor rendimiento) ---
     if (state.elements.radio.songJustChanged) {
         const radioVizX = state.elements.truck.x + 75;
         const radioVizY = state.elements.truck.y - 15;
-        createParticleBurst(radioVizX, radioVizY, 40); // Create 40 particles
+        createParticleBurst(radioVizX, radioVizY, 15); // Reducido de 40 a 15 partículas
         state.elements.radio.songJustChanged = false; // Reset flag
     }
 
     // Actualizar partículas
-    // OPTIMIZACIÓN: Iterar hacia atrás para eliminar elementos de forma segura y eficiente.
-    for (let i = state.elements.particles.length - 1; i >= 0; i--) {
-        const p = state.elements.particles[i];
+    // OPTIMIZACIÓN: Usar filter en lugar de splice para evitar re-indexación costosa
+    const particles = state.elements.particles;
+    let writeIndex = 0;
+    for (let i = 0; i < particles.length; i++) {
+        const p = particles[i];
         p.update();
-        if (p.life <= 0) {
-            state.elements.particles.splice(i, 1);
+        if (p.life > 0) {
+            particles[writeIndex++] = p;
         }
     }
-    // Limpiar marcas de neumáticos viejas
-    for (let i = state.elements.skidMarks.length - 1; i >= 0; i--) {
-        if (state.elements.skidMarks[i].life <= 0)
-            state.elements.skidMarks.splice(i, 1);
+    particles.length = writeIndex;
+    // Limpiar marcas de neumáticos viejas (mismo patrón optimizado)
+    const skidMarks = state.elements.skidMarks;
+    writeIndex = 0;
+    for (let i = 0; i < skidMarks.length; i++) {
+        if (skidMarks[i].life > 0) {
+            skidMarks[writeIndex++] = skidMarks[i];
+        }
     }
+    skidMarks.length = writeIndex;
     // Reiniciar vacas para el siguiente ciclo
     if (state.cycleProgress > 0.95) {
         state.elements.cows.forEach(cow => {
@@ -696,6 +715,10 @@ async function start() {
     canvas.height = Config.CANVAS_HEIGHT;
     const ctx = canvas.getContext('2d');
 
+    // OPTIMIZACIÓN: Cachear referencias para evitar búsquedas DOM en cada frame
+    state.cache.canvas = canvas;
+    state.cache.ctx = ctx;
+
     // Configurar manejadores de eventos
     setupInputHandlers();
     setupMobileControls();
@@ -780,12 +803,11 @@ async function start() {
         state.elements.billboards = Array.from({ length: 2 }, () => new Billboard(state.assets.billboardImages));
         // Instancia los nuevos animales
         state.elements.critters = Array.from({ length: 3 }, () => new Critter(state.assets.critterImages));
-        // --- NUEVO: Crear bandadas de pájaros ---
-        state.elements.birdFlocks = Array.from({ length: 3 }, () => new BirdFlock());
-        // --- NUEVO: Crear señales de tráfico ---
-        state.elements.roadSigns = Array.from({ length: 4 }, () => new RoadSign());
-        state.elements.raindrops = Array.from({ length: 200 }, () => new RainDrop());
-        state.elements.stars = Array.from({ length: 100 }, () => ({
+        // --- OPTIMIZADO: Reducir cantidad de elementos para mejor rendimiento ---
+        state.elements.birdFlocks = Array.from({ length: 2 }, () => new BirdFlock()); // Reducido de 3 a 2
+        state.elements.roadSigns = Array.from({ length: 3 }, () => new RoadSign()); // Reducido de 4 a 3
+        state.elements.raindrops = Array.from({ length: 80 }, () => new RainDrop()); // Reducido de 200 a 80
+        state.elements.stars = Array.from({ length: 50 }, () => ({ // Reducido de 100 a 50
             x: Math.random() * Config.CANVAS_WIDTH,
             y: Math.random() * Config.CANVAS_HEIGHT * 0.8,
             radius: Math.random() * 1.2,
