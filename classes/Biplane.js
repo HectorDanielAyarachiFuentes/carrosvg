@@ -84,155 +84,190 @@ export default class Biplane {
         // Dibujar el cartel primero para que esté detrás
         this.drawBanner(ctx);
 
-        // --- Cola ---
-        // Estabilizador vertical (rojo con franja azul)
-        ctx.fillStyle = '#d9252e';
+        // --- Tail Structure ---
+        // Vertical stabilizer
+        const tailGradVertical = ctx.createLinearGradient(-110, -5, -80, -35);
+        tailGradVertical.addColorStop(0, '#e74c3c');
+        tailGradVertical.addColorStop(1, '#c0392b');
+        ctx.fillStyle = tailGradVertical;
         ctx.beginPath();
-        ctx.moveTo(-100, 5);
-        ctx.quadraticCurveTo(-115, -30, -80, -25);
-        ctx.lineTo(-70, 5);
-        ctx.closePath();
-        ctx.fill();
-        
-        ctx.fillStyle = '#0f64b9';
-        ctx.beginPath();
-        ctx.moveTo(-100, 5);
-        ctx.quadraticCurveTo(-105, -28, -88, -22);
-        ctx.lineTo(-80, 5);
+        ctx.moveTo(-95, 2);
+        ctx.quadraticCurveTo(-110, -35, -85, -30);
+        ctx.lineTo(-75, 2);
         ctx.closePath();
         ctx.fill();
 
-        // Estabilizador horizontal (azul)
+        // Inner blue stripe on vertical stabilizer
+        ctx.fillStyle = '#2980b9';
+        ctx.beginPath();
+        ctx.moveTo(-95, 2);
+        ctx.quadraticCurveTo(-102, -28, -88, -25);
+        ctx.lineTo(-82, 2);
+        ctx.closePath();
+        ctx.fill();
+
+        // Horizontal stabilizer
         const tailWingGradient = ctx.createLinearGradient(-95, -5, -95, 5);
-        tailWingGradient.addColorStop(0, '#1a7ff0');
-        tailWingGradient.addColorStop(1, '#0f64b9');
+        tailWingGradient.addColorStop(0, '#3498db');
+        tailWingGradient.addColorStop(1, '#2980b9');
         ctx.fillStyle = tailWingGradient;
         ctx.beginPath();
-        ctx.ellipse(-85, 2, 20, 5, 0, 0, Math.PI * 2);
+        ctx.ellipse(-85, 2, 22, 6, 0, 0, Math.PI * 2);
         ctx.fill();
 
-
-        // --- Cuerpo (Fuselage) ---
-        // Parte inferior (amarillo-naranja)
-        const lowerBodyGradient = ctx.createLinearGradient(0, 10, 0, 35);
-        lowerBodyGradient.addColorStop(0, '#ffc61e');
-        lowerBodyGradient.addColorStop(1, '#f7931e');
-        ctx.fillStyle = lowerBodyGradient;
+        // --- Bottom Wing ---
+        const bottomWingGrad = ctx.createLinearGradient(0, 20, 0, 35);
+        bottomWingGrad.addColorStop(0, '#3498db');
+        bottomWingGrad.addColorStop(1, '#2980b9');
+        ctx.fillStyle = bottomWingGrad;
         ctx.beginPath();
-        ctx.ellipse(0, 10, 85, 25, 0, 0, Math.PI * 2);
-        ctx.fill();
-        // Sombra inferior para más realismo
-        ctx.fillStyle = 'rgba(0, 0, 0, 0.1)';
-        ctx.beginPath();
-        ctx.ellipse(0, 28, 80, 5, 0, 0, Math.PI * 2);
+        ctx.ellipse(15, 26, 60, 10, 0, 0, Math.PI * 2);
         ctx.fill();
 
-
-        // Franja central (azul)
-        const midBodyGradient = ctx.createLinearGradient(0, 0, 0, 20);
-        midBodyGradient.addColorStop(0, '#1a7ff0');
-        midBodyGradient.addColorStop(1, '#0f64b9');
-        ctx.fillStyle = midBodyGradient;
-        ctx.fillRect(-80, 2, 160, 18);
-
-        // Parte superior (roja)
-        const upperBodyGradient = ctx.createLinearGradient(0, -30, 0, 10);
-        upperBodyGradient.addColorStop(0, '#f2353b');
-        upperBodyGradient.addColorStop(1, '#d9252e');
-        ctx.fillStyle = upperBodyGradient;
+        // --- Main Fuselage ---
+        // Lower half (Yellow/Orange gradient)
+        const lowerBodyGrad = ctx.createLinearGradient(0, 5, 0, 30);
+        lowerBodyGrad.addColorStop(0, '#f1c40f');
+        lowerBodyGrad.addColorStop(1, '#f39c12');
+        ctx.fillStyle = lowerBodyGrad;
         ctx.beginPath();
-        ctx.ellipse(0, -5, 80, 20, 0, 0, Math.PI * 2);
-        ctx.fill();
-        // Reflejo superior para más realismo
-        ctx.fillStyle = 'rgba(255, 255, 255, 0.25)';
-        ctx.beginPath();
-        ctx.ellipse(0, -15, 60, 4, 0, 0, Math.PI * 2);
+        ctx.ellipse(0, 10, 85, 22, 0, 0, Math.PI * 2);
         ctx.fill();
 
-        // --- Ala ---
-        const wingGradient = ctx.createLinearGradient(0, 20, 0, 35);
-        wingGradient.addColorStop(0, '#1a7ff0');
-        wingGradient.addColorStop(1, '#0f64b9');
-        ctx.fillStyle = wingGradient;
+        // Bottom shadow
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.15)';
         ctx.beginPath();
-        ctx.ellipse(15, 25, 55, 12, 0, 0, Math.PI * 2);
+        ctx.ellipse(0, 26, 80, 5, 0, 0, Math.PI * 2);
         ctx.fill();
 
-        // --- Tren de aterrizaje ---
-        ctx.strokeStyle = '#333';
-        ctx.lineWidth = 2;
-        ctx.fillStyle = '#aaa';
-        // Soporte derecho
-        ctx.beginPath();
-        ctx.moveTo(-5, 30);
-        ctx.lineTo(-10, 45);
-        ctx.stroke();
-        // Soporte izquierdo
-        ctx.beginPath();
-        ctx.moveTo(35, 30);
-        ctx.lineTo(40, 45);
-        ctx.stroke();
-        // Rueda derecha
-        this.drawWheel(ctx, -10, 50);
-        // Rueda izquierda
-        this.drawWheel(ctx, 40, 50);
-        
-        // --- INICIO: MEJORA DE CABINA Y PILOTO ---
+        // Mid stripe (Blue)
+        const midBodyGrad = ctx.createLinearGradient(0, -2, 0, 18);
+        midBodyGrad.addColorStop(0, '#3498db');
+        midBodyGrad.addColorStop(1, '#2980b9');
+        ctx.fillStyle = midBodyGrad;
+        // Clip to fuselage shape
         ctx.save();
-        
-        // 1. Crear una máscara con la forma de la cabina
+        ctx.beginPath();
+        ctx.ellipse(0, 10, 85, 22, 0, 0, Math.PI * 2);
+        ctx.clip();
+        ctx.fillRect(-90, 0, 180, 16);
+        ctx.restore();
+
+        // Upper half (Red)
+        const upperBodyGrad = ctx.createLinearGradient(0, -25, 0, 5);
+        upperBodyGrad.addColorStop(0, '#e74c3c');
+        upperBodyGrad.addColorStop(1, '#c0392b');
+        ctx.fillStyle = upperBodyGrad;
+        ctx.beginPath();
+        ctx.ellipse(0, 0, 82, 18, 0, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Front nose curve refinement
+        ctx.fillStyle = '#c0392b';
+        ctx.beginPath();
+        ctx.ellipse(78, 5, 6, 14, 0, 0, Math.PI * 2);
+        ctx.fill();
+
+        // --- Cockpit & Pilot Setup ---
+        ctx.save();
+
+        // 1. Cockpit Hole (Dark Inside)
         const cockpitPath = new Path2D();
-        cockpitPath.ellipse(10, -8, 38, 18, 0, 0, Math.PI * 2);
-        
-        // Dibuja una sombra interior para dar profundidad
-        ctx.fillStyle = 'rgba(0,0,0,0.3)';
+        cockpitPath.ellipse(10, -6, 38, 16, 0, 0, Math.PI * 2);
+        ctx.fillStyle = '#2c3e50'; // Deep dark interior
         ctx.fill(cockpitPath);
-        
-        // Aplica la máscara. Todo lo que se dibuje ahora solo será visible dentro de esta ruta.
+
+        // 2. Cockpit Inner Shadow for depth
+        ctx.save();
+        ctx.clip(cockpitPath);
+        ctx.shadowColor = 'black';
+        ctx.shadowBlur = 10;
+        ctx.shadowOffsetX = 0;
+        ctx.shadowOffsetY = 8;
+        ctx.strokeStyle = 'transparent';
+        ctx.lineWidth = 15;
+        ctx.stroke(cockpitPath); // Creates the inner shadow effect
+        ctx.restore();
+
+        // 3. Clip for the pilot so they stay inside the cockpit bounds
         ctx.clip(cockpitPath);
 
-        // 2. Dibujar la imagen del piloto DENTRO de la máscara
         if (this.pilotImg) {
-            const pilotWidth = 90;
-            const pilotHeight = 90;
-            // Centramos y ajustamos al perrito en la cabina
+            const pilotWidth = 100; // Un poco más grande
+            const pilotHeight = 100;
+            // Center pilot inside the cockpit and move higher
             const pilotX = 10 - (pilotWidth / 2);
-            const pilotY = -10 - (pilotHeight / 2) - 5; 
+            const pilotY = -8 - (pilotHeight / 2);
             ctx.drawImage(this.pilotImg, pilotX, pilotY, pilotWidth, pilotHeight);
+
+            // Add a slight dark gradient over the lower half of the pilot to simulate being inside
+            const pilotShadow = ctx.createLinearGradient(0, -2, 0, 10);
+            pilotShadow.addColorStop(0, 'rgba(0,0,0,0)');
+            pilotShadow.addColorStop(1, 'rgba(0,0,0,0.5)');
+            ctx.fillStyle = pilotShadow;
+            ctx.fillRect(pilotX, -2, pilotWidth, pilotHeight);
         }
-        ctx.restore(); // Quitamos la máscara para no afectar a los dibujos siguientes
+        ctx.restore(); // Remove clipping mask
 
-        // 3. Dibujar el borde de la cabina (encima de la imagen y el fuselaje)
-        ctx.strokeStyle = '#282c34';
-        ctx.lineWidth = 2.5;
+        // 4. Cockpit rim / border (Leather aesthetic)
+        ctx.strokeStyle = '#7f8c8d';
+        ctx.lineWidth = 3;
         ctx.stroke(cockpitPath);
-        // --- FIN: MEJORA DE CABINA Y PILOTO ---
 
+        ctx.strokeStyle = '#bdc3c7';
+        ctx.lineWidth = 1;
+        ctx.stroke(cockpitPath);
 
-        // --- Morro y Hélice ---
-        ctx.fillStyle = '#0f64b9';
-        ctx.fillRect(78, -12, 10, 24);
+        // --- Landing Gear ---
+        ctx.strokeStyle = '#7f8c8d';
+        ctx.lineWidth = 3;
+        // Right strut
+        ctx.beginPath(); ctx.moveTo(-5, 28); ctx.lineTo(-15, 45); ctx.stroke();
+        // Left strut
+        ctx.beginPath(); ctx.moveTo(35, 28); ctx.lineTo(45, 45); ctx.stroke();
+
+        // Wheels
+        this.drawWheel(ctx, -15, 48);
+        this.drawWheel(ctx, 45, 48);
+
+        // --- Nose Propeller Cap ---
+        const noseGrad = ctx.createLinearGradient(78, -10, 78, 20);
+        noseGrad.addColorStop(0, '#3498db');
+        noseGrad.addColorStop(1, '#2980b9');
+        ctx.fillStyle = noseGrad;
+        ctx.beginPath();
+        ctx.ellipse(82, 5, 6, 15, 0, 0, Math.PI * 2);
+        ctx.fill();
 
         ctx.save();
         ctx.translate(90, 0);
 
-        // Desenfoque de la hélice mejorado
-        const propBlur = ctx.createRadialGradient(0, 0, 2, 0, 0, 30);
-        propBlur.addColorStop(0, 'rgba(200, 200, 200, 0.6)');
-        propBlur.addColorStop(1, 'rgba(200, 200, 200, 0.1)');
+        // Advanced Propeller Blur
+        const propBlur = ctx.createRadialGradient(0, 0, 2, 0, 0, 32);
+        propBlur.addColorStop(0, 'rgba(236, 240, 241, 0.7)');
+        propBlur.addColorStop(0.5, 'rgba(236, 240, 241, 0.3)');
+        propBlur.addColorStop(1, 'rgba(236, 240, 241, 0)');
         ctx.fillStyle = propBlur;
         ctx.beginPath();
-        ctx.arc(0, 0, 30, 0, Math.PI * 2);
+        ctx.arc(0, 0, 32, 0, Math.PI * 2);
         ctx.fill();
 
+        // Actual spinning propeller blades
         ctx.rotate(this.propellerAngle);
-        ctx.fillStyle = '#cccccc';
-        ctx.fillRect(-2, -30, 4, 60);
-        ctx.fillRect(-30, -2, 60, 4);
-        
-        ctx.fillStyle = '#d9252e';
+        ctx.fillStyle = '#bdc3c7';
+        // Rounded blades
+        ctx.beginPath(); ctx.roundRect(-3, -32, 6, 64, 3); ctx.fill();
+        ctx.beginPath(); ctx.roundRect(-32, -3, 64, 6, 3); ctx.fill();
+
+        // Propeller spinner (center cone)
+        ctx.fillStyle = '#c0392b';
         ctx.beginPath();
-        ctx.arc(0, 0, 5, 0, Math.PI * 2);
+        ctx.arc(0, 0, 6, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.fillStyle = '#e74c3c';
+        ctx.beginPath();
+        ctx.arc(-1, -1, 3, 0, Math.PI * 2);
         ctx.fill();
 
         ctx.restore(); // Restaura el estado antes de la hélice
@@ -244,24 +279,30 @@ export default class Biplane {
         ctx.save();
         ctx.translate(x, y);
 
-        // Neumático
-        ctx.fillStyle = '#333';
+        // Tire
+        ctx.fillStyle = '#2c3e50';
         ctx.beginPath();
-        ctx.arc(0, 0, 8, 0, Math.PI * 2);
+        ctx.arc(0, 0, 9, 0, Math.PI * 2);
         ctx.fill();
-        
-        // Llanta
-        ctx.fillStyle = '#ccc';
+
+        // Inner tire highlight
+        ctx.fillStyle = '#34495e';
+        ctx.beginPath();
+        ctx.arc(0, 0, 7, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Rim
+        ctx.fillStyle = '#bdc3c7';
         ctx.beginPath();
         ctx.arc(0, 0, 5, 0, Math.PI * 2);
         ctx.fill();
-        
-        // Tapacubos
-        ctx.fillStyle = '#aaa';
+
+        // Hubcap
+        ctx.fillStyle = '#7f8c8d';
         ctx.beginPath();
         ctx.arc(0, 0, 2, 0, Math.PI * 2);
         ctx.fill();
-        
+
         ctx.restore();
     }
 
@@ -314,14 +355,14 @@ export default class Biplane {
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
         ctx.lineJoin = 'round';
-        
+
         const textX = bannerFront.x - this.bannerWidth / 2;
         const textY = bannerFront.y;
-        
+
         ctx.strokeStyle = '#4a2c2a';
         ctx.lineWidth = 5;
         ctx.strokeText(this.bannerText, textX, textY);
-        
+
         ctx.fillStyle = '#d9534f';
         ctx.fillText(this.bannerText, textX, textY);
         ctx.restore();

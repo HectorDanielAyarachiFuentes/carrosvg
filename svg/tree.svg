@@ -1,1 +1,14 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="32" height="100" viewBox="0 0 32 100"><path fill="#fff" d="M16 0 8 25h4l-8 25h4L0 75h13v25h6V75h13L24 50h4L20 25h4z"/></svg>
+<svg xmlns="http://www.w3.org/2000/svg" width="32" height="100" viewBox="0 0 32 100">
+  <!-- Trunk -->
+  <rect x="13" y="70" width="6" height="30" fill="#5D4037"/>
+  <rect x="16" y="70" width="3" height="30" fill="#3E2723"/> <!-- Shadow -->
+  <!-- Bottom layer -->
+  <path fill="#2E7D32" d="M2,75 L16,40 L30,75 Z"/>
+  <path fill="#1B5E20" d="M16,40 L30,75 L16,75 Z"/> <!-- Shadow right half -->
+  <!-- Middle layer -->
+  <path fill="#388E3C" d="M4,55 L16,25 L28,55 Z"/>
+  <path fill="#2E7D32" d="M16,25 L28,55 L16,55 Z"/>
+  <!-- Top layer -->
+  <path fill="#4CAF50" d="M6,35 L16,10 L26,35 Z"/>
+  <path fill="#388E3C" d="M16,10 L26,35 L16,35 Z"/>
+</svg>

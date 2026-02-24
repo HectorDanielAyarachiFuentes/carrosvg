@@ -14,7 +14,7 @@ export default class UFO {
         this.targetCow = null;
         this.shootCooldown = 0;
         this.abductionBeamAngle = 0;
-        
+
         // --- NUEVAS PROPIEDADES ---
         this.bobbingAngle = Math.random() * Math.PI * 2; // Para el balanceo
         this.enginePulseAngle = 0; // Para el brillo del motor
@@ -36,7 +36,7 @@ export default class UFO {
             const ufoCycle = (cycleProgress - 0.55) / (0.95 - 0.55);
             this.x = lerp(-100, Config.CANVAS_WIDTH + 50, ufoCycle);
             this.y = lerp(60, 100, ufoCycle);
-            
+
             // --- ACTUALIZACIÓN DE NUEVAS ANIMACIONES ---
             this.lightsAngle += dtSeconds * 3;
             this.bobbingAngle += dtSeconds * 1.2;
@@ -69,7 +69,7 @@ export default class UFO {
         if (this.shootCooldown <= 0) {
             this.shootCooldown = Math.random() * 3000 + 2000;
             if (Math.random() < 0.4 && !this.targetCow) {
-                const targetTree = trees.find(t => 
+                const targetTree = trees.find(t =>
                     !t.isBurning &&
                     t.x + (t.treeImg.width * t.scale) / 2 > this.x &&
                     t.x + (t.treeImg.width * t.scale) / 2 < this.x + this.width
@@ -140,115 +140,170 @@ export default class UFO {
         this._drawSaucerBody(ctx);
         this._drawRunningLights(ctx);
         this._drawDomeAndPilot(ctx);
-        
+
         ctx.restore();
     }
 
     _drawEngineGlow(ctx) {
-        const pulse = Math.sin(this.enginePulseAngle) * 0.5 + 0.5; // 0 a 1
-        const glowRadius = (this.width / 2) * (1 + pulse * 0.3);
-        const glowOpacity = 0.5 + pulse * 0.4;
-        
-        const glowGradient = ctx.createRadialGradient(0, 0, 5, 0, 0, glowRadius);
-        glowGradient.addColorStop(0, `rgba(127, 255, 212, ${glowOpacity})`); // Aguamarina
-        glowGradient.addColorStop(0.5, `rgba(127, 255, 212, ${glowOpacity * 0.5})`);
-        glowGradient.addColorStop(1, 'rgba(127, 255, 212, 0)');
+        const pulse = Math.sin(this.enginePulseAngle) * 0.5 + 0.5; // 0 to 1
+        const glowRadius = (this.width / 2) * (0.8 + pulse * 0.4);
+        const glowOpacity = 0.6 + pulse * 0.4;
 
+        ctx.save();
+        // Central engine core
+        const coreGradient = ctx.createRadialGradient(0, this.height * 0.5, 0, 0, this.height * 0.5, glowRadius * 0.4);
+        coreGradient.addColorStop(0, `rgba(0, 255, 255, ${glowOpacity})`);
+        coreGradient.addColorStop(1, 'rgba(0, 200, 255, 0)');
+        ctx.fillStyle = coreGradient;
+        ctx.beginPath();
+        ctx.ellipse(0, this.height * 0.5, glowRadius * 0.6, glowRadius * 0.3, 0, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Main glow
+        const glowGradient = ctx.createRadialGradient(0, this.height * 0.5, 5, 0, this.height * 0.5, glowRadius);
+        glowGradient.addColorStop(0, `rgba(50, 255, 200, ${glowOpacity * 0.5})`);
+        glowGradient.addColorStop(1, 'rgba(50, 255, 200, 0)');
         ctx.fillStyle = glowGradient;
         ctx.beginPath();
-        ctx.arc(0, this.height / 2, glowRadius, 0, Math.PI * 2);
+        ctx.arc(0, this.height * 0.5, glowRadius, 0, Math.PI * 2);
         ctx.fill();
+        ctx.restore();
     }
 
     _drawSaucerBody(ctx) {
-        // 1. Anillo inferior oscuro (alberga las luces)
-        ctx.fillStyle = '#454a4d';
+        const rx = this.width / 2;
+        const ry = this.height * 0.6; // Flatter saucer
+
+        // Bottom chassis (dark)
+        ctx.fillStyle = '#2c3e50';
         ctx.beginPath();
-        ctx.ellipse(0, 0, this.width / 2, this.height, 0, 0, Math.PI * 2);
+        ctx.ellipse(0, 4, rx * 0.9, ry * 0.9, 0, 0, Math.PI * 2);
         ctx.fill();
 
-        // 2. Cuerpo principal del platillo con gradiente metálico
-        const bodyGradient = ctx.createLinearGradient(0, -this.height, 0, this.height);
-        bodyGradient.addColorStop(0, '#d0d3d4'); // Plata claro
-        bodyGradient.addColorStop(0.5, '#aab1b5'); // Gris medio
-        bodyGradient.addColorStop(1, '#808b96'); // Gris oscuro
-        ctx.fillStyle = bodyGradient;
+        // Mid chassis (holds the lights)
+        ctx.fillStyle = '#34495e';
         ctx.beginPath();
-        ctx.ellipse(0, -2, this.width / 2 * 0.95, this.height * 0.9, 0, 0, Math.PI * 2);
+        ctx.ellipse(0, 2, rx * 0.95, ry * 0.95, 0, 0, Math.PI * 2);
         ctx.fill();
+
+        // Top saucer hull
+        const bodyGrad = ctx.createLinearGradient(0, -ry * 2, 0, ry);
+        bodyGrad.addColorStop(0, '#ffffff'); // Shiny highlight
+        bodyGrad.addColorStop(0.3, '#bdc3c7'); // Silver
+        bodyGrad.addColorStop(1, '#7f8c8d');   // Darker edge
+        ctx.fillStyle = bodyGrad;
+        ctx.beginPath();
+        ctx.ellipse(0, 0, rx, ry, 0, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Center ring detailing (inner panel line)
+        ctx.strokeStyle = 'rgba(255, 255, 255, 0.5)';
+        ctx.lineWidth = 1.5;
+        ctx.beginPath();
+        ctx.ellipse(0, -1, rx * 0.6, ry * 0.6, 0, 0, Math.PI * 2);
+        ctx.stroke();
+
+        ctx.strokeStyle = 'rgba(0, 0, 0, 0.3)';
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.ellipse(0, 1, rx * 0.6, ry * 0.6, 0, 0, Math.PI * 2);
+        ctx.stroke();
     }
 
     _drawRunningLights(ctx) {
-        const numLights = 8;
-        const lightRadius = this.width / 2 * 0.9;
-        const lightYScale = this.height * 0.6;
+        const numLights = 10;
+        const rx = this.width / 2 * 0.95;
+        const ry = this.height * 0.6 * 0.95;
+
+        ctx.save();
         for (let i = 0; i < numLights; i++) {
             const angle = (this.lightsAngle + (i * Math.PI * 2 / numLights)) % (Math.PI * 2);
-            // Solo dibujar las luces en la mitad frontal
-            if (Math.sin(angle) > 0) {
-                const lx = -Math.cos(angle) * lightRadius;
-                const ly = Math.sin(angle) * lightYScale;
+            // Draw only lights facing the front (perspective)
+            if (Math.sin(angle) >= -0.1) {
+                const lx = Math.cos(angle) * rx;
+                const ly = 2 + Math.sin(angle) * ry;
+
                 const lightColor = this.lightColors[i % this.lightColors.length];
-                
-                ctx.save();
-                ctx.translate(lx, ly);
-                
-                // Brillo de la luz
-                const lightGradient = ctx.createRadialGradient(0,0,0,0,0,5);
-                lightGradient.addColorStop(0, lightColor);
-                lightGradient.addColorStop(1, "rgba(0,0,0,0)");
-                ctx.fillStyle = lightGradient;
+
+                // Light glow
+                ctx.shadowColor = lightColor;
+                ctx.shadowBlur = 12;
+                ctx.fillStyle = lightColor;
                 ctx.beginPath();
-                ctx.arc(0, 0, 5, 0, Math.PI * 2);
+                ctx.arc(lx, ly, 3.5, 0, Math.PI * 2);
                 ctx.fill();
 
-                // Punto central de la luz
-                ctx.fillStyle = '#fff';
+                // Bright center
+                ctx.shadowBlur = 0;
+                ctx.fillStyle = '#ffffff';
                 ctx.beginPath();
-                ctx.arc(0, 0, 1.5, 0, Math.PI * 2);
+                ctx.arc(lx, ly, 1.5, 0, Math.PI * 2);
                 ctx.fill();
-                
-                ctx.restore();
             }
         }
+        ctx.restore();
     }
 
     _drawDomeAndPilot(ctx) {
-        const domeRadius = this.width / 3.5;
-        const domeY = -this.height * 0.2;
+        const domeRadius = this.width * 0.35;
+        const domeY = -this.height * 0.3;
 
         ctx.save();
-        
-        // Cúpula base
-        const domeGradient = ctx.createLinearGradient(0, domeY - domeRadius, 0, domeY);
-        domeGradient.addColorStop(0, 'rgba(173, 216, 230, 0.2)');
+
+        // 1. Draw Alien Pilot
+        // Alien body/shoulders
+        ctx.fillStyle = '#2ecc71';
+        ctx.beginPath();
+        ctx.ellipse(0, domeY + domeRadius * 0.2, domeRadius * 0.4, domeRadius * 0.4, 0, Math.PI, Math.PI * 2);
+        ctx.fill();
+
+        // Alien head
+        ctx.beginPath();
+        ctx.ellipse(0, domeY - domeRadius * 0.2, domeRadius * 0.45, domeRadius * 0.35, 0, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Eyes (Large black slanted ovals)
+        ctx.fillStyle = '#111';
+        // Left eye
+        ctx.beginPath();
+        ctx.ellipse(-domeRadius * 0.2, domeY - domeRadius * 0.2, domeRadius * 0.1, domeRadius * 0.18, -Math.PI / 6, 0, Math.PI * 2);
+        ctx.fill();
+        // Right eye
+        ctx.beginPath();
+        ctx.ellipse(domeRadius * 0.2, domeY - domeRadius * 0.2, domeRadius * 0.1, domeRadius * 0.18, Math.PI / 6, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Eye highlights
+        ctx.fillStyle = '#fff';
+        ctx.beginPath();
+        ctx.arc(-domeRadius * 0.23, domeY - domeRadius * 0.25, domeRadius * 0.03, 0, Math.PI * 2);
+        ctx.arc(domeRadius * 0.17, domeY - domeRadius * 0.25, domeRadius * 0.03, 0, Math.PI * 2);
+        ctx.fill();
+
+        // 2. Glass Dome
+        const domeGradient = ctx.createLinearGradient(0, domeY - domeRadius, 0, domeY + domeRadius);
+        domeGradient.addColorStop(0, 'rgba(173, 216, 230, 0.7)');
+        domeGradient.addColorStop(0.3, 'rgba(173, 216, 230, 0.2)');
+        domeGradient.addColorStop(0.8, 'rgba(173, 216, 230, 0.1)');
         domeGradient.addColorStop(1, 'rgba(173, 216, 230, 0.6)');
         ctx.fillStyle = domeGradient;
+
         ctx.beginPath();
-        ctx.arc(0, domeY, domeRadius, 0, Math.PI * 2);
+        // Top arc of the dome
+        ctx.arc(0, domeY, domeRadius, Math.PI, 0, false);
+        // Bottom curve connecting to the saucer
+        ctx.ellipse(0, domeY, domeRadius, domeRadius * 0.3, 0, 0, Math.PI, false);
         ctx.fill();
 
-        // Silueta del piloto alienígena (dibujada dentro de la cúpula)
-        ctx.fillStyle = 'rgba(20, 25, 30, 0.6)';
+        // 3. Highlight / glare on the glass
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.6)';
         ctx.beginPath();
-        ctx.moveTo(0, domeY + domeRadius * 0.5); // base del cuello
-        ctx.ellipse(0, domeY, domeRadius * 0.4, domeRadius * 0.7, 0, Math.PI, Math.PI * 2); // Cabeza
-        ctx.fill();
-
-        // Reflejo de la cúpula
-        const highlightY = domeY - domeRadius * 0.5;
-        const highlightX = -domeRadius * 0.3;
-        const highlightGradient = ctx.createRadialGradient(highlightX, highlightY, 1, highlightX, highlightY, domeRadius * 0.8);
-        highlightGradient.addColorStop(0, 'rgba(255, 255, 255, 0.7)');
-        highlightGradient.addColorStop(1, 'rgba(255, 255, 255, 0)');
-        ctx.fillStyle = highlightGradient;
-        ctx.beginPath();
-        ctx.arc(0, domeY, domeRadius, 0, Math.PI * 2);
+        ctx.ellipse(-domeRadius * 0.3, domeY - domeRadius * 0.4, domeRadius * 0.25, domeRadius * 0.15, -Math.PI / 6, 0, Math.PI * 2);
         ctx.fill();
 
         ctx.restore();
     }
-    
+
     // --- MÉTODOS DE DIBUJO DE HABILIDADES (sin cambios) ---
     drawBeams(ctx) {
         this.laserBeams.forEach(b => b.draw(ctx));
